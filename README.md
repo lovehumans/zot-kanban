@@ -11,7 +11,7 @@ in is its Column. Git tracks the files, an agent files and moves them through it
 drag them in a browser, and the page is served by the extension's own process. No database, no hosted service, no
 account.
 
-[Features](#features-and-anti-features) · [Requirements](#requirements) · [Usage](#usage) · [Install](#install) · [Changelog](CHANGELOG.md) · [Unlicense](UNLICENSE) 
+[Features](#features-and-anti-features) · [Requirements](#requirements) · [Usage](#usage) · [Install](#install) · [Changelog](CHANGELOG.md)
 
 ## Purpose
 
@@ -150,7 +150,7 @@ dated note you type into `comments` with nothing else is a valid Comment. A bloc
 blocked-reason field. The board re-reads the files on every request, so a change made outside it shows up on the next
 poll.
 
-## Installing
+## Install
 
 ```bash
 zot ext install https://github.com/lovehumans/zot-kanban  
@@ -158,7 +158,7 @@ zot ext install https://github.com/lovehumans/zot-kanban
 
 To run a prebuilt binary instead of recompiling at each zot start, change `exec` to `"./zot-kanban"`, `args` to `[]`, and build it with `go build -o zot-kanban .`.
 
-### Uninstalling
+### Uninstall
 ~~~bash
  zot ext remove kanban
 ~~~
