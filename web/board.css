@@ -1,0 +1,376 @@
+/* The board dressed: the Columns, Cards, modal, drag, marks and words of web/board.html, and where the palette's
+   colours go on them. This sheet names only roles - var(--page), var(--edge), var(--prio-high) - and holds no hex
+   value and no Gruvbox name; every colour it paints is declared and bound twice in web/gruvbox.css, once per theme.
+   Nothing in this sheet may invent a colour a theme does not declare. A rule here can still
+   mean its hue - a Priority stripe, the switch's fill, the backlog's heading - but it says so with a role the palette
+   sheet binds, which is what lets a palette be swapped without rewriting a stripe. */
+
+* { box-sizing: border-box; }
+body { margin: 0; padding: 1rem 1.5rem; font: 15px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+       color: var(--fg); background: var(--page); }
+header { display: flex; align-items: baseline; gap: 1rem; border-bottom: 1px solid var(--line);
+         padding-bottom: .6rem; margin-bottom: 1rem; }
+h1 { font-size: 1.05rem; margin: 0; letter-spacing: .08em; color: var(--fg-strong); }
+.project { color: var(--muted); margin: 0; flex: 1; }
+.refresh { color: var(--muted); margin: 0; font-size: .8rem; }
+/* The filter is the header's own control, so it wears the header's size and the edit form's field shape
+   rather than arriving as a browser default the page has not dressed. .project already takes the free width, so
+   the box lands at the right end of the line with nothing new in the layout. */
+header input[type="search"] { font: inherit; font-size: .8rem; color: var(--fg); background: var(--raised);
+                              border: 1px solid var(--edge); border-radius: 4px; padding: .2rem .4rem;
+                              width: 13rem; }
+header input[type="search"]:focus { border-color: var(--accent); outline: none; }
+header input[type="search"]::placeholder { color: var(--muted); }
+/* The theme control is the header's other control and wears the filter's shape for the same reason - a browser
+   default select is a control that has not been told what page it is on - written as its own rule because only the
+   filter needs a width: the select's is the longest of its three words. Label and control both wear the header's
+   quiet ink, so the pair reads as the header's own furniture rather than as a form: the chosen state is not what
+   the header is about, and a bright word in it would outshout the board it selects. */
+header .theme { display: inline-flex; align-items: baseline; gap: .35rem; color: var(--muted); font-size: .8rem; }
+header select { font: inherit; font-size: .8rem; color: var(--muted); background: var(--raised);
+                border: 1px solid var(--edge); border-radius: 4px; padding: .2rem .4rem; }
+header select:focus { border-color: var(--accent); outline: none; }
+/* The help control is the header's third control, so it wears the shape the header's other two were given rather
+   than a browser default the sheet has not dressed. Its one character is its own words - `?` says what a glyph would
+   only draw - and it sits at the line's right end, after the theme select, which is where a human looks for the page
+   explaining itself. */
+header .help-open { font: inherit; font-size: .95rem; line-height: 1.2; color: var(--muted); background: var(--raised);
+                    border: 1px solid var(--edge); border-radius: 4px; padding: .2rem .55rem; cursor: pointer; }
+header .help-open:hover { color: var(--accent); border-color: var(--accent); }
+header .help-open:focus { border-color: var(--accent); outline: none; }
+footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1px solid var(--line);
+         padding-top: .6rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1.5rem; }
+.columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; }
+/* The footer's closed count is a link, because the Cards it counts are one the board keeps rather than shows and
+   asking is the only way to see them. It wears the footer's own quiet ink until it is hovered, where
+   the accent says a whole page read is one click away; when that Column is being drawn it takes the raised fill
+   and the edge a control wears, so the page says which of its two states it is in instead of leaving that to the
+   link's title. */
+.closed-toggle { color: var(--muted); text-decoration: underline; text-decoration-color: var(--edge);
+                 border: 1px solid transparent; border-radius: 4px; padding: .1rem .35rem; }
+.closed-toggle:hover { color: var(--accent); text-decoration-color: var(--accent); }
+.closed-toggle.is-on { color: var(--fg); background: var(--raised); border-color: var(--edge); text-decoration: none; }
+.col { border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem; background: var(--surface); }
+.col h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 .5rem;
+          color: var(--muted); display: flex; justify-content: space-between; }
+/* The closed Column is drawn in the same shape as the six so a Card kept there is a Card like any other, and it
+   reads quieter than the working Columns for the one reason that separates it: a human has to ask for it, and it
+   is not something the board is holding in hand. Its Cards carry no stripe change and no drag - a
+   Card in it left its Column by being closed and leaves it only by reopening. */
+.col-closed { background: var(--page); border-style: dashed; }
+.card { border: 1px solid var(--edge); border-left: 3px solid var(--edge); border-radius: 4px;
+        padding: .45rem .55rem; margin-bottom: .5rem; background: var(--raised); }
+/* A Priority is a stripe on the left edge, and the three of them are the quiet hues that sit between this
+   Column's surface and the Card raised out of it: dark red for high, dark green for mid, dark grey for low. Grey is
+   low's because blue is spent - `--accent` is the interface speaking, an id, a drop it will accept, and the two new
+   marks - and a stripe wearing it reads as a mark that moved rather than a Priority that was filed. The
+   three hues are named as roles in the palette sheet, and a theme binds them to identical bytes, so the ten stripe
+   rules - these, the claimed ones and the ones that move a stripe to the right edge further down - are still the
+   rules a theme does not touch. */
+.card.p-high { border-left-color: var(--prio-high); }
+.card.p-mid  { border-left-color: var(--prio-mid); }
+.card.p-low  { border-left-color: var(--prio-low); }
+.card .title { margin: 0; color: var(--fg-strong); }
+.card .body { margin: .35rem 0 0; color: var(--body); white-space: pre-wrap; }
+.card .meta { margin: .35rem 0 0; color: var(--muted); font-size: .75rem; }
+/* An empty Column, the count beside a heading and the backlog's heading are three rules whose whole point is the hue
+   they wear, and each hue is bound per theme above rather than named twice here: an empty Column's quiet
+   ink is bg4 on a dark ground and fg4 on a light one, the same bytes reached from the other side of the mirror, and
+   the backlog's purple is the one that crosses into the loud half, where the two halves do differ. */
+.empty { color: var(--empty-ink); margin: 0; }
+.col-backlog h2 { color: var(--backlog-ink); }
+.col-done .card { opacity: .72; }
+.board-error { color: var(--wrong); border: 1px solid var(--wrong-edge); background: var(--page); border-radius: 5px;
+               padding: .5rem .7rem; margin: 0 0 .8rem; grid-column: 1 / -1; }
+.col h2 .count { color: var(--count-ink); font-variant-numeric: tabular-nums; }
+.card code { color: var(--accent); }
+.card .commit { color: var(--write); }
+/* A Card an Agent filed that nobody has opened since wears the board's blue as an asterisk before its title, in
+   every Column. Opening the Card is what takes it off; the read-state that decides it is .kanban/unseen, which is
+   gitignored because a mark a human looked at is not a change to the repository. */
+.card .new-mark { color: var(--accent); }
+/* A Comment an Agent filed is painted into the count the Card's face already prints, in the same blue: the number
+   is where the face says "this one has discussion", so the number changes colour rather than a mark standing
+   beside it. Opening the Card takes the blue off, because opening it is reading its Comments; the read-state that
+   decides it is .kanban/unseen_comments, gitignored for the same reason the new mark's is. */
+.card .new-comments { color: var(--accent); }
+/* A Card an Agent is holding wears a thick edge, because the way a claim is released is a human drag and the
+   edge is what tells a hand this Card is someone's to let go of. Loud orange is the hue no role spent before
+   this: green says the session named on the Card, and the priority stripes are the dark red, dark green and dark
+   grey of the left edge, which stay what they are inside the held edge - being held and being wanted are two
+   facts. A Card in doing nobody holds keeps the plain edge: the edge is the gap that closes. */
+.card.claimed { border: 2px solid var(--held); }
+.card.claimed.p-high { border-left: 3px solid var(--prio-high); }
+.card.claimed.p-mid  { border-left: 3px solid var(--prio-mid); }
+.card.claimed.p-low  { border-left: 3px solid var(--prio-low); }
+/* Which side of the Card the stripe sits on is the face's way of saying which door captured it: an
+   Agent's Card puts down its 3px left edge and wears the same Priority hue on its right edge, so the board still
+   paints one stripe per Card out of the same three quiet hues and adds no glyph a human has to learn. The four rules
+   are written of a Column because the Card inside the modal wears no stripe at all, and they leave a held Card to the
+   rules above: a Claim can only be held by an Agent's door, so the thick orange edge already says whose a held Card
+   is, and its stripe stays on the left inside that edge (the human's ask). */
+.col .card.by-agent:not(.claimed)        { border-left: 1px solid var(--edge); }
+.col .card.by-agent.p-high:not(.claimed) { border-right: 3px solid var(--prio-high); }
+.col .card.by-agent.p-mid:not(.claimed)  { border-right: 3px solid var(--prio-mid); }
+.col .card.by-agent.p-low:not(.claimed)  { border-right: 3px solid var(--prio-low); }
+/* Which session holds it is said on the face only when the board has more than one holder to tell apart; the
+   modal says it whatever the board looks like, with how long ago the Card was taken up. */
+.card .claim { color: var(--holder); }
+/* A Card in done that names no commit, or names one the repository behind the board has no commit of, says
+   so on its face. The loud red is the colour this board already uses for what is wrong (.board-error, .card-error),
+   and a Card carrying it is not dimmed with the rest of done: it is the one thing on that Column a human is meant
+   to look at. */
+.card .contradiction { color: var(--wrong); }
+.col-done .card:has(.contradiction) { opacity: 1; }
+.card .comments { margin: .45rem 0 0; padding-left: .6rem; border-left: 2px solid var(--edge); }
+.card .comment { margin: 0 0 .4rem; }
+.card .comment:last-child { margin-bottom: 0; }
+.card .comment-meta { margin: 0 0 .1rem; color: var(--muted); font-size: .72rem; }
+.card .comment-text { margin: 0; color: var(--body); white-space: pre-wrap; }
+/* A Comment long enough to run past the ten lines the modal shows (foldable in web.go) is a native <details>
+   whose summary is the Comment's own text, so the whole Comment is the control one click opens and shuts again.
+   The clamp is the fold: ten line boxes, wrapped lines counted - commentFoldLines in web.go is the same number,
+   and this is where it is measured on the page. A clamp paints its own … and paints it only where it cut, so a
+   Comment that fits carries no false cue, and list-style puts the <details>'s triangle off because a triangle
+   before a paragraph says nothing the … does not. The hover colour is the other hint that this text is clickable,
+   and the same click is why selecting words inside a Comment now starts one click earlier: open it first. */
+.card .comment-fold { margin: 0; }
+.card .comment-fold > summary { list-style: none; cursor: pointer; }
+.card .comment-fold:not([open]) > summary { display: -webkit-box; -webkit-box-orient: vertical;
+                                             -webkit-line-clamp: 10; overflow: hidden; }
+.card .comment-fold > summary:hover { color: var(--accent); }
+.card .comment-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A Card with nothing on it says so, so the form below it is not mistaken for the whole of the region. The
+   form that files a Comment (POST /api/card/<id>/comment) brings no new field styles of its own: it carries
+   .card-edit, whose label, textarea and button the edit form already defines. */
+.card .comment-none { margin: 0 0 .2rem; color: var(--muted); font-size: .78rem; }
+.card[data-card] { cursor: grab; }
+.card[data-card]:active { cursor: grabbing; }
+/* A Card in a Column nothing lands in is no one's to let go of, so it wears no drag cursor. The rule is
+   written against the mark rather than the Column's name, because done and closed are the same case for the
+   same reason and a rule named after one of them leaves the other showing a hand. It
+   sits after the grab rules so it wins the tie their :active makes. */
+.col[data-no-drop] .card { cursor: default; }
+.col-dragover { border-color: var(--accent); background: var(--hover-ground); }
+/* A Column nothing lands in, seen at the point the hand is aiming at: the edge a refusal wears on this
+   board, while the drag is over it. Solid as well as red, because a Column drawn dashed - closed - keeps
+   its own border-style and a refusal that looks different per Column reads as two rules rather than one.
+   SayNoDrop in web/board.js puts the class on and clearOver takes it off. */
+.col-refused { border-color: var(--wrong-edge); border-style: solid; }
+/* The reason such a Column carries under its own name, so the mark that enforces the rule is not the only
+   place the rule is written. Quiet because it is standing there all the time. */
+.col-rule { margin: 0 0 .5rem; color: var(--muted); font-size: .75rem; }
+/* The line a drag drops onto: the gap a Card lands in, in the colour this board gives a write. It borrows half
+   the .5rem the Card above already leaves and gives it back below the line, so the line sits centred in that
+   gap and the Column is 2 px taller for it. A margin of -.5rem collapsed the gap to the line's own 2 px and
+   pulled the neighbours together instead. It stays out of the pointer's way so the Column underneath keeps
+   answering the drag. */
+.insert-at { border-top: 2px dashed var(--write); margin: -.25rem 0 .25rem; pointer-events: none; }
+.move-error { color: var(--wrong); border: 1px solid var(--wrong-edge); background: var(--page); border-radius: 5px;
+              padding: .4rem .7rem; margin: 0 0 .8rem; }
+.move-error:empty { display: none; }
+
+/* The composer is how the board files a Card (POST /api/card). It is a native <details>, so its summary is
+   the field that opens it and the board shows one line until a Card is being written. That name and the field
+   names it opens are words a human reads, not headings, so they keep their own case and no tracking; the
+   uppercase and the letter-spacing belonged to the capitals. The fields are .card-edit's own, so only
+   the strip and the row that sets the priority and files the Card are new, and that row keeps the priority narrow
+   the way the edit form keeps order narrow. */
+.composer { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: .35rem .6rem .55rem;
+            margin: 0 0 .8rem; }
+.composer summary { color: var(--muted); font-size: .8rem; cursor: pointer; }
+.composer[open] summary { color: var(--fg); }
+.composer summary:hover, .composer summary:focus-visible { color: var(--accent); }
+.composer .card-edit { margin: .5rem 0 0; padding-top: 0; border-top: 0; }
+/* The strip is a grid so the button can sit in the middle of it: 1fr auto 1fr puts the button's own track at the
+   row's centre, the priority at one end and nothing at the other, because a button parked at the far end of a
+   full-width row is a long mouse ride. */
+.composer-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: .6rem; margin-top: .5rem; }
+.composer-row .prio { justify-self: start; margin: 0; }
+.composer-row .modal-save { grid-column: 2; }
+
+/* The Card modal is a plain <dialog> the page opens itself. The Card inside it keeps the
+   board's vocabulary - .title, .body, .meta, .comments - so only the frame and the close control are
+   new, and it wears no priority stripe: a stripe is for reading a Column at a glance, and inside the modal a
+   Priority is the segment chosen on the switch and nothing else. What the rule used to lay down
+   was not a stripe either: `border: 0` puts currentColor on every side, so the border-left longhands that
+   followed restored a 3px solid edge in the Card's own text colour, and the sheet painted a thick light line
+   against the fields while its comment described a hue set by p-high / p-mid / p-low. The backdrop is the page's own
+   ground with a transparency, and the transparency is the pseudo-element's `opacity` rather than an alpha baked into
+   a colour, so the value painted is a role the palette test can see. */
+.card-modal { border: 1px solid var(--edge); border-radius: 6px; background: var(--surface); color: var(--fg);
+              padding: .7rem .9rem; width: min(92vw, 42rem); }
+/* The backdrop is the page's own ground at 70%, which dims the board behind a modal instead of hiding it. Both
+   values used to be bg0-hard spelled with an alpha, one per theme, and invisible to the palette test because that
+   test reads hex: this names the role and puts the transparency on the pseudo-element, which carries nothing but its
+   own background, so the same bytes composite over the same ground and no light counterpart is left. */
+.card-modal::backdrop { background: var(--page); opacity: .7; }
+.card-modal .card { border: 0; border-radius: 0; background: none; padding: 0; margin: 0; }
+/* A Card's title is read once: the words at the top of the dialog are the field that edits them, so there is no
+   heading above a Title box holding the same words. It rests looking like the Card's name - the face's own ink and
+   size, no box - and says it is a field in the two states the sheet already uses for one: the pointer near it
+   draws the edge, the caret in it draws the write field's fill and the accent. */
+.card-modal .card-title { width: 100%; font: inherit; font-size: 1rem; color: var(--fg-strong);
+                          background: none; border: 1px solid transparent; border-radius: 4px;
+                          padding: .15rem .35rem; margin: 0; }
+.card-modal .card-title:hover { border-color: var(--line); }
+.card-modal .card-title:focus { border-color: var(--accent); outline: none; background: var(--raised); }
+.modal-actions { display: flex; justify-content: flex-end; margin: 0 0 .35rem; }
+/* A glyph is what the sprite in web/icons.html draws, at the size the control's own text would have been,
+   and it paints in the ink its control wears. A glyph button - the class every one of them carries beside the
+   control's own name - is that control with its words left out: the box keeps the shape and the hue the control's
+   rule gives it, the square replaces the words, and the words live on in the button's accessible name
+   (aria-label, web/card.detail.html). Only the modal's controls wear one: the composer's button names the Column
+   a Card lands in, and no glyph says that. */
+.icon-sprite { position: absolute; width: 0; height: 0; }
+.i { width: 1em; height: 1em; vertical-align: -.15em; }
+.card-modal .glyph { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; padding: 0; }
+.modal-close { font: inherit; color: var(--fg); background: var(--raised); border: 1px solid var(--edge);
+               border-radius: 4px; padding: .15rem .6rem; cursor: pointer; }
+.modal-close:hover { border-color: var(--accent); }
+
+/* The id a Card is named by is the stem of its file, built from the minute it was filed and its title, so
+   it is long and worth copying rather than retyping. It is the control that copies itself: a <button> painted
+   as the identifier it prints - the accent a Card's name wears, and the dotted underline that says these words
+   are clickable rather than text to select - because a second button beside it was chrome saying the same
+   thing twice. The note after it is where web/board.js says whether the clipboard took it. */
+.card-modal .card-id { font: inherit; color: var(--accent); background: none; border: 0; padding: 0;
+                       cursor: pointer; text-decoration: underline; text-decoration-style: dotted;
+                       text-decoration-color: var(--edge); }
+.card-modal .card-id:hover { text-decoration-color: var(--accent); }
+.card-modal .card-id:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card-modal .copy-note { color: var(--muted); font-size: .72rem; margin-left: .4rem; }
+.card-modal .copy-note:empty { display: none; }
+
+/* The board's explanation of its own workflow (web/help.html) borrows the Card modal's frame - the dialog carries
+   .card-modal beside .help-modal, so the border, the fill and both backdrops are the rules above rather than a second
+   pair - and adds only what a page of prose needs: a wider measure, a height the viewport bounds with the overflow to
+   read past it, and the type the text is dressed in. The headings keep the page's two voices: an h2 in the ink a
+   Card's name wears, and an h3 in the quiet uppercase a Column's heading wears. The rules an agent works
+   by are the longest thing here and the least read, so they start folded in a <details> and are dressed as a section
+   heading that opens; unfolded they keep the raised fill and the edge, which say the tool's words rather than the
+   page's own. */
+.help-modal { width: min(92vw, 46rem); max-height: 86vh; overflow: auto; }
+.help-modal h2 { font-size: 1rem; color: var(--fg-strong); margin: 0 0 .4rem; }
+.help-modal h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+                 margin: 1rem 0 .3rem; }
+.help-modal p, .help-modal li { color: var(--body); }
+.help-modal ol, .help-modal ul { margin: 0; padding-left: 1.2rem; }
+.help-modal .help-rules { margin: 1rem 0 0; }
+.help-modal .help-rules summary { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em;
+                                  color: var(--muted); cursor: pointer; }
+.help-modal .help-rules summary:hover { color: var(--accent); }
+.help-modal .help-rules p { background: var(--raised); border-left: 3px solid var(--edge);
+                            border-radius: 0 4px 4px 0; padding: .45rem .65rem;
+                            font-size: .875rem; line-height: 1.65; white-space: pre-line; }
+
+/* The edit form is the browser's only way to change a Card: the fields a Card file holds, laid out in
+   the modal that already shows them. The field names are words a human reads, so they keep their case; a Column's
+   heading is a Protocol name and keeps the uppercase a heading wears. The save button is the close
+   button's shape wearing the write hue, because it is the one action here that writes. .card-error is the reason
+   a write was refused, shown where the human is looking rather than behind the dialog (web/board.js). */
+.card-edit { margin: .6rem 0 0; padding-top: .5rem; border-top: 1px solid var(--line); }
+.card-edit label { display: block; margin: .4rem 0 .15rem; color: var(--muted); font-size: .72rem; }
+.card-edit input, .card-edit textarea { width: 100%; font: inherit; color: var(--fg);
+                                                     background: var(--raised); border: 1px solid var(--edge);
+                                                     border-radius: 4px; padding: .25rem .4rem; }
+.card-edit textarea { resize: vertical; }
+/* The Body field is the length of its text, and nothing above that: field-sizing is the platform's own autosize,
+   and a min-height would have been a floor a one-line Card body had to sit in the middle of, which is a huge empty
+   box where a short description was filed. Only the ceiling is the sheet's: sixteen lines, so a long body cannot
+   push the save button out of a dialog that bounds its own height nowhere - past the ceiling the field scrolls.
+   The drag handle stays, because the field answers its content only until a human overrules it, and `rows` left the
+   markup for the same reason: that height was its job and is now the sheet's (the human's ask).
+   The rule names a textarea because the body has two faces
+   now and only one of them is a field; the other keeps the same ceiling, for the same reason. */
+.card-modal textarea.card-body { field-sizing: content; max-height: 16lh; }
+.card-edit input:focus, .card-edit textarea:focus { border-color: var(--accent); outline: none; }
+
+/* The body's reading face: the Markdown the Card holds, rendered, and nothing of the field's box about it. It
+   rests as the Card's own words - the title field's pattern, no box at rest and the edge drawn by the pointer -
+   and clicking it is what brings the field back, so `cursor: text` is the affordance and the focus ring is the
+   interface's own, because web/board.js puts the face in the tab order. */
+.card-modal .card-body.md { max-height: 16lh; overflow-y: auto; margin: 0; padding: .15rem .35rem;
+                            border: 1px solid transparent; border-radius: 4px; cursor: text; }
+.card-modal .card-body.md:hover { border-color: var(--line); }
+.card-modal .card-body.md:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* The whole of what a Card's words can become: web/markdown.js emits no tag this sheet has not written a rule
+   for, and a Card holding raw HTML never reaches here as one, because the renderer escapes before it tags.
+   A heading inside a Card being read stays small - it names a section of that Card, not a page. A
+   code block takes the field's own ground and scrolls sideways rather than pushing the dialog wider; an inline
+   code span keeps the accent .card code already gave it and gains the same ground. The last block of a rendered
+   body or Comment carries no bottom gap, because what follows it is the sheet's own spacing. */
+.comment-text.md { white-space: normal; }
+.md p { margin: 0 0 .35rem; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { margin: .5rem 0 .25rem; font-size: .9rem;
+                                                  color: var(--fg-strong); }
+.md h1:first-child, .md h2:first-child, .md h3:first-child, .md h4:first-child,
+.md h5:first-child, .md h6:first-child { margin-top: 0; }
+.md ul, .md ol { margin: 0 0 .35rem; padding-left: 1.2rem; }
+.md li { margin: 0 0 .1rem; }
+.md pre { margin: 0 0 .35rem; padding: .35rem .5rem; background: var(--raised);
+          border: 1px solid var(--line); border-radius: 4px; overflow-x: auto; white-space: pre; }
+.md pre code { color: var(--fg); }
+.md code { padding: 0 .25em; border-radius: 3px; background: var(--raised); }
+.md a { color: var(--accent); }
+.md > :last-child { margin-bottom: 0; }
+
+/* Priority is chosen by a switch, not a dropdown: three named segments in one bordered row, the chosen one
+   filled with the hue that Card's stripe wears. The three fills are the stripe's three quiet hues and
+   nothing new - never the bright red a refusal wears, which is what the palette's loud red means.
+   The word on a filled segment takes whichever side of the hue it contrasts with: the ink the Card
+   itself is written in on high's dim red (4.8:1), the page's own colour on mid's green (5.3:1) and low's grey
+   (4.6:1); the same ink on all three would leave one of them under 3:1, which is why the sheet picks per hue and
+   not per control. low's fill is the grey that reads as inert on its own, which is why the row's border and
+   dividers carry the affordance. The radios are hidden with appearance rather than display: a display:none input
+   is out of the tab order and the group loses arrow keys with it, so the input stays put at zero size and the
+   segment paints what it means. The focus ring is the interface's own blue, drawn on the segment the invisible
+   input stands for, inset because the row clips its own corners. The segment names the Priority the way the Card
+   names it - high, mid, low - while the label beside the row names the field the switch is for, and the two share
+   one line: the group is a div with role="radiogroup" and its own aria-label, because a <legend> is laid out in
+   the <fieldset>'s own slot and no dependable rule brings it beside the fieldset's contents.
+   The radios still carry the group: same name, same three values, arrow keys and Tab unchanged. */
+.prio { display: flex; align-items: center; gap: .45rem; margin: .4rem 0 0; }
+.prio-label { color: var(--muted); font-size: .72rem; padding: 0 .25rem; }
+.prio-row { display: inline-flex; border: 1px solid var(--edge); border-radius: 4px; overflow: hidden; }
+.card-edit .prio input { appearance: none; width: 0; height: 0; min-width: 0; margin: 0; padding: 0;
+                         border: 0; background: none; }
+.prio-row label { margin: 0; padding: .25rem .7rem; color: var(--fg); font-size: .8rem; cursor: pointer;
+                  text-transform: none; letter-spacing: 0; }
+.prio-row label + label { border-left: 1px solid var(--line); }
+.prio input[value="high"]:checked + label { background: var(--prio-high); color: var(--prio-high-ink); }
+.prio input[value="mid"]:checked + label  { background: var(--prio-mid); color: var(--page); }
+.prio input[value="low"]:checked + label  { background: var(--prio-low); color: var(--page); }
+/* The fills are the quiet hues and so do not change with the theme; the ink on them is the one thing that does, and
+   it is a role bound per theme rather than a counterpart written here. High is the segment that needs it: dark
+   binds `--prio-high-ink` to that half's brightest ink, fg0, and the light half binds it to its own page ground,
+   bg0-hard, because near-black on the same dark red is the board reading its own Priority by colour and reading
+   nothing. mid and low take the page's colour in both themes, and the three hues themselves are bound in both
+   blocks because they are the same bytes on either side of the mirror. */
+.prio input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.edit-row { display: grid; grid-template-columns: 1fr 7rem; gap: .6rem; }
+.card-edit .modal-actions { margin: .5rem 0 0; }
+.modal-save { font: inherit; color: var(--fg); background: var(--raised); border: 1px solid var(--write);
+              border-radius: 4px; padding: .2rem .8rem; cursor: pointer; }
+.modal-save:hover { border-color: var(--write); background: var(--hover-ground); }
+
+/* Deleting a Card is the one action in the modal that takes one off the board, so it sits at the end of the
+   Card rather than beside save, quiet until it is hovered, and the browser's own question (hx-confirm in
+   card.detail.html) is what stands between the click and the file moving into .kanban/trash/. */
+.card-delete { margin: .6rem 0 0; padding-top: .5rem; border-top: 1px solid var(--line); }
+.modal-delete { font: inherit; color: var(--muted); background: none; border: 1px solid var(--edge);
+                border-radius: 4px; padding: .2rem .8rem; cursor: pointer; }
+.modal-delete:hover { color: var(--wrong); border-color: var(--wrong-edge); }
+/* Closing and reopening sit at the same end of the Card in the same quiet shape as deleting does, because all
+   three take a Card out of the Column it sits in and only the door differs. A close is not
+   a mistake, so its hover names the record rather than the wrong: the accent, the ink the board already means
+   by the interface speaking, rather than the red a contradiction wears. */
+.card-close { margin: .6rem 0 0; padding-top: .5rem; border-top: 1px solid var(--line); }
+.modal-close-card, .modal-reopen { font: inherit; color: var(--muted); background: none; border: 1px solid var(--edge);
+                                   border-radius: 4px; padding: .2rem .8rem; cursor: pointer; }
+.modal-close-card:hover, .modal-reopen:hover { color: var(--accent); border-color: var(--accent); }
+.card-error { color: var(--wrong); border: 1px solid var(--wrong-edge); background: var(--page); border-radius: 5px;
+              padding: .35rem .6rem; margin: .5rem 0 0; }
+.card-error:empty { display: none; }

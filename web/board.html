@@ -1,0 +1,224 @@
+<!doctype html>
+{{/* The document stamps the version that wrote it, so a polled fragment naming the version answering has something
+    to be compared with. The footer's words say the same fact to a human; this says it to the page. */}}
+<html lang="en" data-version="{{.Version}}">
+<head>
+<meta charset="utf-8">
+<title>zot-kanban · {{tilde .CWD}}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- htmx 4 swaps a response for every status except 204 and 304, so a refused move would replace a
+     column with the server's error text. This says otherwise; web/board.js then shows the reason
+     beside the board. The value is JSON on purpose: htmx's own config language cannot express a list,
+     which is what web/htmx.js's HCON merge does with it. -->
+<meta name="htmx-config" content='{"noSwap":[204,304,"4xx","5xx"]}'>
+{{/* The board's theme, decided in the browser and written on <html> as data-theme="light" or "dark" before the
+    stylesheet below is reached: a link in the head is enough for a browser to paint a light page dark for one frame,
+    and web/gruvbox.css binds the light roles to [data-theme="light"] rather than to a @media rule, because a human's
+    own choice has to beat the browser's rather than lose a specificity tie to it. So the resolution lives
+    here and not in board.js - which is loaded with defer and so arrives after the first paint - and it keeps the
+    select wired here too, because resolving a stored preference is one definition in this file rather than two lines
+    in each of them. Nothing crosses to the server: no route, no cookie, no field travelling with the board's requests
+    the way ?q= and closed do, because a theme is a preference of the browser looking at the board and not
+    a fact about which Cards the board is drawing. With no script at all the page keeps the sheet's own dark binding. */}}
+<script>
+(function () {
+  "use strict";
+  var KEY = "zot-kanban.theme";
+  var light = window.matchMedia("(prefers-color-scheme: light)");
+  // What the human asked for: auto, light or dark, and auto is a state of its own - the board following the
+  // browser - which is also what a board with nothing stored is. Anything else in the key is treated as nothing.
+  function preference() {
+    var wanted = localStorage.getItem(KEY);
+    return wanted === "light" || wanted === "dark" ? wanted : "auto";
+  }
+  // Only auto is resolved, and it is resolved to the name the sheet knows rather than left to the sheet.
+  function apply() {
+    var wanted = preference();
+    document.documentElement.dataset.theme = wanted === "auto" ? (light.matches ? "light" : "dark") : wanted;
+  }
+  apply();
+  document.addEventListener("DOMContentLoaded", function () {
+    var select = document.getElementById("theme");
+    if (!select) return;
+    select.value = preference();
+    select.addEventListener("change", function () {
+      localStorage.setItem(KEY, select.value);
+      apply();
+    });
+    // A system that flips while the board is following it flips the board: no reload, and no preference written,
+    // because auto is still what the human chose.
+    light.addEventListener("change", apply);
+  });
+})();
+</script>
+<script src="/static/htmx.js" defer></script>
+{{/* The Markdown a Card's words are read as, ahead of the page that asks for it: deferred scripts run in the
+     order they are written, and web/board.js calls renderMarkdown on the first swap it sees. */}}
+<script src="/static/markdown.js" defer></script>
+<script src="/static/board.js" defer></script>
+{{/* The palette sheet first, then the sheet that dresses the board with it: every colour is declared and bound per
+     theme in gruvbox.css, and board.css names only those roles. The inline script above
+     has already written data-theme on <html> before either is linked, so neither can paint a light board dark first. */}}
+<link rel="stylesheet" href="/static/gruvbox.css">
+<link rel="stylesheet" href="/static/board.css">
+</head>
+{{/* One attribute on the page body carries the page's view through every request this page makes - the filter
+    it is reading, and whether the closed Column is drawn. hx-<name>:inherited
+    is htmx 4's way of naming an attribute on an ancestor and having everything under it resolve it
+    (web/htmx.js's #attributeValue follows the tree), so the 3 s poll, the composer's POST, the modal's PATCH
+    and each Card's own GET name the same q without four attributes scattered over four templates. What they
+    get back is a board already narrowed to that q (viewOf and pageView in web.go), which is what stops a Column a
+    write re-renders from flashing back to everything it holds. web/board.js's drag is the one request not
+    made by a template, and it names the view there. The second name the attribute carries, #closed-state, is the
+    hidden field below: it exists only on a page that asked for the closed Column, so a board that did not ask
+    sends no closed field at all and htmx includes nothing for a name it cannot find. */}}
+<body hx-include:inherited="#q,#closed-state">
+{{/* The four glyphs the board draws live here, once, as <symbol>s the fragments name with <use> - including
+    the Card modal's markup, which arrives from GET /api/card/<id> into this document and finds its glyph
+    already in it. */}}
+{{template "icons.html" .}}
+<header>
+  <h1>zot-kanban</h1>
+  {{/* The project the board belongs to, written the way a shell writes it, and which copy of this
+      extension is answering for it: `local` under <project>/.zot/extensions, `global` under zot's state
+      directory, `repo` for a build run straight from the tree (`zot --ext .`, or a `zot-kanban serve` out
+      of a repository build). The board's files always sit in the project, so naming the directory twice
+      said nothing; naming the install says the one thing the page cannot be read without - whether a
+      `just install` or a `zot ext install` is the one that moved what you are looking at (installKind in
+      web.go). */}}
+  <p class="project">{{tilde .CWD}} ({{.Install}})</p>
+  <p class="refresh">drag a card onto the line it lands on &middot; click a card to open it &middot; {{ruleFor "done"}}</p>
+  {{/* The filter, at the right end of the header, is live: it asks on a pause in typing rather than on a
+      submit, and what comes back is the board itself. It sits outside #board for the modal's and the
+      composer's reason - the poll re-swaps the board every 3 s, and half-typed text must not be pulled out
+      from under the human. A Column the query reaches nothing in keeps its place and says no cards, so the
+      board shrinks without moving. It is not in the address bar as you type, so Back is not filled with the
+      half-queries on the way to the one you meant; a link that does carry ?q= is honoured, and the box shows
+      it. Its placeholder and its accessible name are the same words, and they name the key that reaches it -
+      `/`, which web/board.js answers by moving the caret here - because the header's hint line says what a Card
+      is moved with and says nothing about the filter, and an empty box is where a human is standing when the
+      question is asked. */}}
+  <input id="q" type="search" name="q" value="{{.Query}}" placeholder="/ to filter cards"
+         aria-label="/ to filter cards"
+         hx-get="/api/board" hx-target="#board" hx-swap="outerHTML" hx-trigger="input changed delay:150ms">
+  {{/* The theme, at the filter's other side, and the words it shows are words like every other control here:
+      the label names the control and the three options name its three states, with auto spelled out in
+      the tooltip because "auto" on its own does not say what it is auto about. It is a plain native select and not a
+      switch wearing hues, because a Priority is read off a Card by its stripe and a theme is not a thing the board
+      means by a colour. It is outside #board like the filter is, so the 3 s poll cannot pull a
+      choice out from under the human, and it names no hx-*, so no request the board makes carries it: changing the
+      theme is a fact about this browser, and web/board.html's own script is the only code that reads or writes it.
+      Each option wears a glyph before its word: a native select holds text and nothing else, so the
+      glyph is a character rather than a <use> of the sprite, and the three are ◐ ☀ ☾: the half circle says the
+      browser decides, the sun and the moon say which side of it the board wears. They come from two Unicode blocks
+      — Geometric Shapes, then Miscellaneous Symbols — both old enough that a font drawing one draws the others,
+      and the sun is listed with emoji presentation in Unicode's own data: should a browser ever paint it in colour
+      here, a U+FE0E behind it asks for the text glyph.
+      The words stay, because the words are what the control says. */}}
+  <label class="theme" title="auto follows the browser's light or dark preference">theme
+    <select id="theme">
+      <option value="auto">◐ auto</option>
+      <option value="light">☀ light</option>
+      <option value="dark">☾ dark</option>
+    </select>
+  </label>
+  {{/* The board's explanation of its own workflow, at the header's right end. Its control is one character: `?` is
+      the word no glyph would add to, and the words it names the control with are its aria-label and its title.
+      Opening it asks nothing of the server - web/help.html is already in this document, the
+      way the Card modal's frame is - so the button carries an hx-on:click rather than an hx-* request, the composer's
+      hx-on:toggle being the precedent for a header control that only the page acts on. It sits outside #board like
+      the filter and the theme, so the 3 s poll cannot close what the human is reading. */}}
+  <button type="button" class="help-open" aria-label="how this board works" title="how this board works - the Columns, the path a Card takes and the actions you and an agent have"
+          hx-on:click="document.getElementById('help-modal').showModal()">?</button>
+  {{/* closed is a Column the human asked for, and asking is a fact about the page rather than about one
+      request. This hidden field is what makes the 3 s poll, the composer's POST, the modal's PATCH and each
+      Card's own GET name the same view the footer's closed link turned on, the way the filter box above it
+      carries ?q=; web/board.js names it on the drag for the same reason. It is rendered only when the page is
+      drawing the closed Column, so an ordinary board sends nothing for it and that Column stays where the Board
+      keeps it. It has no widget of its own because the footer's link is the control, and a checkbox
+      beside it would be a second way to say the same thing that a poll could not see changing. */}}
+  {{if .ClosedView}}<input type="hidden" id="closed-state" name="closed" value="1">{{end}}
+</header>
+<p id="move-error" class="move-error"></p>
+{{/* Filing a Card from the board: the composer posts to POST /api/card, which files into inbox, the one
+    Column a browser may put a new Card in; where it goes after that is triage, and done is only a commit's
+    to reach. It is a native <details> outside #board for the reason the modal is: the 3 s poll
+    re-swaps #board, and a half-typed Card must not be pulled out from under the human. Its summary is the
+    field that opens it, so the board keeps to one line until a Card is being written. hx-on:toggle is
+    <details>'s own event - one colon, because hx-on:: names an htmx event (web/htmx.js) - and it sits on the
+    <details> rather than on the form inside it, because toggle fires at the <details> and does not bubble
+    (MDN, HTMLDetailsElement: toggle event), and htmx runs an hx-on handler with `this` bound to the element
+    carrying the attribute: only here is `this.open` the state that just changed. So the caret lands in the
+    title the moment the strip opens - by a click on the summary or by Enter on it, since both fire the same
+    event - and filing is a click and a type. hx-on::after:request is
+    what makes the strip ready for the next Card once this one is filed, and it only runs on a response the
+    server accepted; the reason for one it refused is web/board.js's to place. The fields are the edit
+    form's, so gruvbox.css styles them the same way; the priority switch arrives pre-set to the priority
+    Board.Add gives a Card that names none, and the three segments wear the three hues a stripe wears; the label
+    stands beside the segments rather than above them, on the one line the Card modal shows too.
+    The button's plus sits beside its words rather than instead of them, because the Column a Card
+    lands in is the thing no glyph says, and its tooltip names the key that files the Card, which the
+    words on the button cannot say themselves. */}}
+<details id="composer" class="composer" hx-on:toggle="if (this.open) this.querySelector('#new-title').focus()">
+  <summary>New Card</summary>
+  <form class="card-edit composer-form" hx-post="/api/card"
+        hx-on::after:request="if (ctx.response.status &lt; 400) { this.reset(); this.querySelector('#composer-error').textContent = ''; }">
+    <label for="new-title">Title</label>
+    <input id="new-title" name="title" required>
+    <label for="new-body">Body</label>
+    <textarea id="new-body" name="body" rows="3"></textarea>
+    <div class="composer-row">
+      <div class="prio" role="radiogroup" aria-label="Priority">
+        <span class="prio-label">Priority</span>
+        <div class="prio-row">{{range priorities}}
+          <input type="radio" name="priority" id="new-priority-{{.}}" value="{{.}}"{{if eq . defaultPriority}} checked{{end}}>
+          <label class="p-{{.}}" for="new-priority-{{.}}">{{.}}</label>{{end}}
+        </div>
+      </div>
+      <button type="submit" class="modal-save" title="Ctrl+Enter files this Card in inbox, from any field of this form"><svg class="i" aria-hidden="true"><use href="#icon-plus"/></svg> file in inbox</button>
+    </div>
+    <p class="card-error" id="composer-error"></p>
+  </form>
+</details>
+{{template "index.html" .}}
+<!-- The Card modal lives outside #board on purpose: #board is re-swapped by the 3 s poll, and a Card
+     being read or edited must not be pulled out from under the human. htmx 4.0.1 has no popup support, so
+     this is a plain <dialog> the page opens itself; its Close is a form with method="dialog".
+     Esc comes from the element; a click beside the Card comes from closedby="any", because a modal dialog's
+     own default is closedby="closerequest" (MDN: HTMLDialogElement.closedBy). Firefox has had the attribute
+     since 141 and Chrome/Edge since 134; Safari has not, and this board carries no shim for it - there the
+     modal closes by its button or by Esc. -->
+<dialog id="card-modal" class="card-modal" aria-label="Card" closedby="any"></dialog>
+{{template "help.html" .}}
+{{/* The version the board is running sits leftmost in the footer rather than in the header: the header is the board's own
+     voice, and this is a fact about the binary answering. Everything the page fetches - the stylesheet, the
+     scripts, the routes - is embedded in that binary, so the board is only as new as what is installed, and this
+     is the string to expect after a just install. `zot-kanban version` prints this same string; `zot ext list`
+     reports the same version under the extension's own name, `kanban`, because the footer names the board and the
+     manifest names the extension.
+     The footer's three items are separated by a middot each, the way its header line separates its hints; the
+     stylesheet gives each separator the footer's own gap on both sides. It prints no clock: the line beside it
+     already says the board's answer to "how new is this?" - every request re-reads the files - while a time the
+     server read said nothing a reader can act on. */}}
+<footer>
+  <span>zot-kanban {{.Version}}</span> &middot;
+  <span>{{if ne .Shown .Total}}{{.Shown}} of {{.Total}} cards{{else}}{{.Total}} cards{{end}}</span> &middot;
+  {{/* The Cards this board has closed, as a number of its own and as the link that draws them: closed is the
+      Column the board keeps rather than shows, so the only way a human sees it is by asking, and this is where
+      the asking lives. The number is what .kanban/closed/ holds whether or not the view is drawing
+      it, which is why it is not folded into the count beside it - that one is the Columns on the screen. The
+      link carries the filter the page is reading, so turning the closed Column on does not throw the query away,
+      and it is a whole page read rather than a swap because the footer sits outside #board, the region the poll
+      re-renders. When the Column is being drawn the link is the way back out, and the is-on class and
+      aria-current say which of the two this link is. */}}
+  {{if .ClosedView}}
+  <a class="closed-toggle is-on" aria-current="true" href="/?q={{urlquery .Query}}"
+     title="hide the closed Cards again - the board keeps them in .kanban/closed/">closed {{.Closed}}</a> &middot;
+  {{else}}
+  <a class="closed-toggle" href="/?q={{urlquery .Query}}&closed=1"
+     title="show the Cards this board has closed - kept in .kanban/closed/, never deleted">closed {{.Closed}}</a> &middot;
+  {{end}}
+  <span>files re-read on every request</span>
+</footer>
+</body>
+</html>

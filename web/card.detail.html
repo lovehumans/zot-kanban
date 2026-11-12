@@ -1,0 +1,84 @@
+{{/* One Card, everything on it: what card.fragment.html leaves out. This is swapped into the dialog in
+    web/board.html, so it brings its own close control - a form with method="dialog", which the browser
+    closes without a line of JavaScript. Below it is the edit form, the only way a browser
+    changes a Card: it PATCHes the same door a drag uses, so title, body and priority go through
+    the rules the model layer has, and a Card that saves closes the modal on the response's own event
+    (web/board.js). The title is that form's first field and the Card's name at once: an <input> printed where
+    the heading stood, associated with the form by the form attribute rather than nested in it, because a Card is
+    read once and a heading above a box holding the same words read it twice. The field's own `required` gates
+    the submit, and a Card needs a title is the model layer's answer to the same emptiness. Enter in it saves,
+    which is what a browser does with a single-line field in a form, and Ctrl+S saves from anywhere in this view;
+    the save button's tooltip is where that key is named.
+    Priority is one switch of three named segments wearing the three hues a stripe wears, its label standing on
+    the same line as the segments, the same control the composer files with, not a dropdown to open.
+    It is printed on that switch alone: the word in .meta was the same Priority said twice,
+    once as ink and once as a control.
+    Order is printed in .meta and not edited: where a Card sits is something a hand puts it
+    at by dragging it onto the dotted line, not a number to type. A body is not printed and then also
+    edited; the textarea is the body, printed once and in the Markdown its file holds. web/board.js reads those
+    words into HTML above the field and hides the field, and a click on what it rendered puts the field back:
+    the body a Card carries is the only copy on the wire, reading it needs no second string beside
+    it, and the field is still the one thing the form submits. It carries no
+    data-card on purpose: the Card in the modal is read or edited, the Card in a column is the one that
+    can be dragged. The id printed in .meta is the stem of the Card's file, which is long enough to be
+    worth copying rather than retyping, so the id is itself the control that hands it to the clipboard: a
+    <button> drawn as the identifier it prints, wearing the accent a Card's name wears and the dotted underline
+    that says these words are clickable (web/board.js). What the modal prints and what the click
+    copies are the same string, which is what makes the paste name the Card to an agent. The commit a done Card names is printed here, and so is what is wrong with it
+    when the board can see something wrong: no commit named, or a name the repository behind the board has no
+    commit of. The modal marks the same Card the board marks, because a Card that reaches done without
+    evidence is not finished work whoever is looking at it. The Comments and the form
+    that files one are card.comments.html, the same
+    region POST /api/card/<id>/comment answers with, so filing one swaps the region the human typed in and
+    nothing else on this Card - the edit form above keeps what it holds. The last control is the one that takes
+    a Card out of the Column it sits in, and which control that is depends on that Column, because the three
+    doors do three different things and only one of them answers the Card in front of the human. A Card in a
+    working Column is deleted: hx-confirm stands between the click
+    and DELETE /api/card/<id>, which moves the file to .kanban/trash/ rather than destroying it. A
+    Card in done is closed: its file moves to .kanban/closed/, where the board keeps it and reads it on demand,
+    and no delete button sits beside it, because finished work is kept rather than thrown away - which is also
+    the answer POST /api/card/<id>/close gives a request and Board.Delete gives a hand that reached for the
+    wrong door. A Card in closed is reopened: POST /api/card/<id>/reopen files it back
+    into done at the end of that Column's Order, where the work to be worked again is what a reader sees first.
+    Closing is the one Card action a browser may take that no Agent action and no drag is, so it is
+    a button here and a verb in the shell and nowhere else. In every case the answer is empty or a set of
+    Columns, the modal closes on the saved event, and the next poll redraws what the Column holds.
+    Who filed the Card is said here and not on the Card face, because the asterisk a new Card carries already
+    says that much on the board, and the two hands a Card can come from are worth naming when a Card is being
+    read rather than scanned. */}}
+<article class="card detail p-{{.Priority}}">
+  <form method="dialog" class="modal-actions"><button class="modal-close glyph" aria-label="close this Card view"
+      title="close this view - the Card is not changed"><svg class="i" aria-hidden="true"><use href="#icon-x"/></svg></button></form>
+  <input class="card-title" id="card-title" name="title" form="card-edit" aria-label="Card title" value="{{.Title}}" required>
+  <p class="meta"><button type="button" class="card-id" id="card-id" data-copy="{{.ID}}" title="copy this Card's id to the clipboard">{{.ID}}</button><span class="copy-note" id="copy-note" role="status"></span> &middot; {{.Column}} &middot; order {{.Order}} &middot; updated {{since .Updated}} &middot; created {{since .Created}}{{if .Origin}} by <span class="origin">{{.Origin}}</span>{{end}}{{if .Commit}} &middot; commit <span class="commit">{{.Commit}}</span>{{end}}{{if .Contradiction}} &middot; <span class="contradiction">{{.Contradiction}}</span>{{end}}{{if .Claim}} &middot; held by <span class="claim">{{.Claim.Session}}</span> {{since .Claim.At}}{{end}}</p>
+  <form class="card-edit" id="card-edit" hx-patch="/api/card/{{.ID}}">
+    <div class="prio" role="radiogroup" aria-label="Priority">
+      <span class="prio-label">Priority</span>
+      <div class="prio-row">{{range priorities}}
+        <input type="radio" name="priority" id="card-priority-{{.}}" value="{{.}}"{{if eq . $.Priority}} checked{{end}}>
+        <label class="p-{{.}}" for="card-priority-{{.}}">{{.}}</label>{{end}}
+      </div>
+    </div>
+    <label for="card-body">Body</label>
+    <textarea class="card-body" id="card-body" name="body">{{.Body}}</textarea>
+    <p class="card-error" id="card-error"></p>
+    <div class="modal-actions"><button type="submit" class="modal-save glyph" aria-label="save this Card"
+        title="save this Card - its title, body and priority - Ctrl+S from anywhere in this Card view"><svg class="i" aria-hidden="true"><use href="#icon-save"/></svg></button></div>
+  </form>
+  {{template "card.comments.html" .}}
+  {{if eq .Column "done"}}
+  <p class="card-close"><button type="button" class="modal-close-card"
+      hx-post="/api/card/{{.ID}}/close"
+      hx-confirm="Close this Card? Its file moves to .kanban/closed/, where the board keeps it and reads it on demand."
+      title="move this Card's file to .kanban/closed/ - finished work is kept there, not deleted"><svg class="i" aria-hidden="true"><use href="#icon-archive"/></svg> close Card</button></p>
+  {{else if eq .Column "closed"}}
+  <p class="card-close"><button type="button" class="modal-reopen"
+      hx-post="/api/card/{{.ID}}/reopen"
+      title="bring this Card back into done, filed at the end of that Column's Order">reopen Card</button></p>
+  {{else}}
+  <p class="card-delete"><button type="button" class="modal-delete glyph" aria-label="delete this Card"
+      hx-delete="/api/card/{{.ID}}"
+      hx-confirm="Delete this Card? Its file moves to .kanban/trash/ and the board stops showing it."
+      title="move this Card's file to .kanban/trash/ - that directory and git history are the two ways back"><svg class="i" aria-hidden="true"><use href="#icon-trash"/></svg></button></p>
+  {{end}}
+</article>

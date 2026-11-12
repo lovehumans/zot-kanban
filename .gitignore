@@ -1,0 +1,14 @@
+# Go build artifacts: build them yourself, never commit them
+/zot-kanban
+/zot-kanban.exe
+*.test
+
+# Scratch a zot session leaves when this clone is opened as a project, and the copy `just install`
+# stages there
+/.zot-tmp
+/.zot/extensions/
+
+# The board's own state, when a board is served from this clone. It is not part of the artifact, and
+# it must not stand in the way of publishing one: untracked files here would be read as an
+# unpublished local edit.
+.kanban/

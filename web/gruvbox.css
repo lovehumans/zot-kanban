@@ -1,0 +1,166 @@
+/* This is the palette sheet: the board's colours, and what each one means on this board. Every colour here is a
+   value Gruvbox itself defines, taken from the Gruvbox palette of record kept in the repository this extension is
+   developed in: the names below are that palette's names with the leading `$` dropped, so any colour on the board can
+   be traced to the Gruvbox value it comes from. Nothing is invented - a colour the palette does not hold, or a role
+   bound in only one of the two themes, fails a test kept there.
+
+   Both halves of the palette are listed, not only what is painted today, so the mapping is readable as a mapping.
+   Which half the roles bind is what a theme is, and `data-theme` on the page's own element says which one
+   this page is in (web/board.html). Gruvbox's light half is the dark half mirrored - its bg1..bg4 are
+   byte-for-byte its fg1..fg4, and the reverse - which is why rebinding the roles carries light mode through a hundred
+   rules rather than writing a second sheet.
+
+   What is not here is where the colours go. web/board.css dresses the board - the Columns, Cards, modal, drag and
+   marks - and names only the roles bound below, never a hex value and never a Gruvbox name. That separation is the
+   point of the split: a second palette is another sheet in this shape, and nothing in web/board.css changes for it. */
+
+:root {
+  /* Dark is what a board is when nothing has been said about it, and it is the binding a page with no script keeps.
+     `data-theme="light"` further down outranks it, and web/board.html resolves the third state - auto - into one of
+     these two names before the sheet paints, so no `@media` rule has to guess what the human chose. `color-scheme`
+     is declared per theme rather than once, because it is what makes the browser's own scrollbars, select popups and
+     form fields wear the theme instead of staying dark on a light page. */
+  color-scheme: dark;
+
+  /* Backgrounds, darkest to quietest. The page sits on bg0-hard, a Column on bg0, and whatever is raised out of a
+     Column - a Card, a field, a button - on bg1. bg2 is the edge that separates them. */
+  --gb-dm-bg0-hard: #1d2021;
+  --gb-dm-bg0: #282828;
+  --gb-dm-bg0-soft: #32302f;
+  --gb-dm-bg1: #3c3836;
+  --gb-dm-bg2: #504945;
+  --gb-dm-bg3: #665c54;
+  --gb-dm-bg4: #7c6f64;
+
+  /* Foregrounds, brightest to dimmest. */
+  --gb-dm-fg0: #fbf1c7;
+  --gb-dm-fg1: #ebdbb2;
+  --gb-dm-fg2: #d5c4a1;
+  --gb-dm-fg3: #bdae93;
+  --gb-dm-fg4: #a89984;
+
+  /* The quiet half of the colours: what a Column or a stripe says at rest. */
+  --gb-dm-dark-red: #cc241d;
+  --gb-dm-dark-green: #98971a;
+  --gb-dm-dark-yellow: #d79921;
+  --gb-dm-dark-blue: #458588;
+  --gb-dm-dark-purple: #b16286;
+  --gb-dm-dark-aqua: #689d6a;
+  --gb-dm-dark-orange: #d65d0e;
+  --gb-dm-dark-gray: #928374;
+
+  /* The loud half: what the board uses to mean something - a claim, a contradiction, a focus ring. */
+  --gb-dm-light-red: #fb4934;
+  --gb-dm-light-green: #b8bb26;
+  --gb-dm-light-yellow: #fabd2f;
+  --gb-dm-light-blue: #83a598;
+  --gb-dm-light-purple: #d3869b;
+  --gb-dm-light-aqua: #8ec07c;
+  --gb-dm-light-orange: #f38019;
+  --gb-dm-light-gray: #a89984;
+
+  /* The light half, and the one place it is genuinely new. Its backgrounds and its foregrounds are the dark half's
+     foregrounds and backgrounds - lm-bg1 is dm-fg1, lm-fg0 is dm-bg0 - and its eight quiet colours are the same
+     values written twice. Only its loud half differs: the loud hues are darkened, because the #fb4934 that reads on
+     a dark ground is a red that barely reads on a cream one. */
+  --gb-lm-bg0-hard: #f9f5d7;
+  --gb-lm-bg0: #fbf1c7;
+  --gb-lm-bg0-soft: #f2e5bc;
+  --gb-lm-bg1: #ebdbb2;
+  --gb-lm-bg2: #d5c4a1;
+  --gb-lm-bg3: #bdae93;
+  --gb-lm-bg4: #a89984;
+  --gb-lm-fg0: #282828;
+  --gb-lm-fg1: #3c3836;
+  --gb-lm-fg2: #504945;
+  --gb-lm-fg3: #665c54;
+  --gb-lm-fg4: #7c6f64;
+  --gb-lm-dark-red: #cc241d;
+  --gb-lm-dark-green: #98971a;
+  --gb-lm-dark-yellow: #d79921;
+  --gb-lm-dark-blue: #458588;
+  --gb-lm-dark-purple: #b16286;
+  --gb-lm-dark-aqua: #689d6a;
+  --gb-lm-dark-orange: #d65d0e;
+  --gb-lm-dark-gray: #928374;
+  --gb-lm-light-red: #9d0006;
+  --gb-lm-light-green: #79740e;
+  --gb-lm-light-yellow: #b57614;
+  --gb-lm-light-blue: #076678;
+  --gb-lm-light-purple: #8f3f71;
+  --gb-lm-light-aqua: #427b58;
+  --gb-lm-light-orange: #af3a03;
+  --gb-lm-light-gray: #7c6f64;
+
+  /* The roles the rest of this sheet is written in, and the hue each one keeps: red is what is wrong, orange is a
+     Card someone is holding, green is the session named on it, aqua is what a Card names or a write does, blue is
+     the interface's own - an id, focus, a column accepting a drop, the asterisk on a Card nobody has opened yet and
+     the comment count nobody has read - grey is what a Card is at rest, a low stripe, an empty Column, a Column's
+     count - and purple is the backlog's. A light theme is a second set of these, not a second sheet. */
+  --fg: var(--gb-dm-fg1);
+  --fg-strong: var(--gb-dm-fg0);
+  --body: var(--gb-dm-fg2);
+  --muted: var(--gb-dm-fg4);
+  --page: var(--gb-dm-bg0-hard);
+  --surface: var(--gb-dm-bg0);
+  --raised: var(--gb-dm-bg1);
+  --line: var(--gb-dm-bg1);
+  --edge: var(--gb-dm-bg2);
+  --accent: var(--gb-dm-light-blue);
+  --write: var(--gb-dm-light-aqua);
+  --held: var(--gb-dm-light-orange);
+  --holder: var(--gb-dm-light-green);
+  --wrong: var(--gb-dm-light-red);
+  --wrong-edge: var(--gb-dm-dark-red);
+  /* Eight of these are what a rule used to write twice - a rule plus a `:root[data-theme="light"]` counterpart -
+     and the role is what replaces the counterpart. bg0-soft is the ground a control wears while the hand is on it: a
+     Column a drag is aimed at, a save button hovered. high's segment ink is chosen per theme rather than per control.
+     An empty Column's ink and the count beside a heading are bg4 and bg3 on a dark ground and fg4 and
+     fg3 on a light one, which is the same bytes reached from the other side of the mirror, and the backlog's purple
+     is the one of the three that crosses into the loud half, where the halves do differ. The three
+     Priority hues are quieter than that: dark red, dark green and dark grey are byte-for-byte the same colours in
+     both halves of the palette (its 22,23,29 against its 61,62,68), so binding them here paints exactly what
+     the rules painted before. They are bound for a different reader: the sheet that dresses the board names
+     `--prio-high` and never a Gruvbox name, so a palette can be changed without rewriting a stripe. */
+  --hover-ground: var(--gb-dm-bg0-soft);
+  --prio-high: var(--gb-dm-dark-red);
+  --prio-mid: var(--gb-dm-dark-green);
+  --prio-low: var(--gb-dm-dark-gray);
+  --prio-high-ink: var(--gb-dm-fg0);
+  --empty-ink: var(--gb-dm-bg4);
+  --count-ink: var(--gb-dm-bg3);
+  --backlog-ink: var(--gb-dm-light-purple);
+}
+
+/* A theme is a second binding of these roles, and it is the whole of what a theme is: the hundred rules below this
+   one are written through it rather than through the palette. Two bindings are not the swap the mirror
+   suggests. `--wrong` takes the light half's own red, because the loud half is the one place Gruvbox does not mirror
+   and a dark-mode loud red on a cream page is a mark that barely reads. `--wrong-edge` keeps #cc241d in both themes,
+   because a quiet hue is the same bytes in both halves of the palette and the edge of a contradiction is not the
+   contradiction's ink. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --fg: var(--gb-lm-fg1);
+  --fg-strong: var(--gb-lm-fg0);
+  --body: var(--gb-lm-fg2);
+  --muted: var(--gb-lm-fg4);
+  --page: var(--gb-lm-bg0-hard);
+  --surface: var(--gb-lm-bg0);
+  --raised: var(--gb-lm-bg1);
+  --line: var(--gb-lm-bg1);
+  --edge: var(--gb-lm-bg2);
+  --accent: var(--gb-lm-light-blue);
+  --write: var(--gb-lm-light-aqua);
+  --held: var(--gb-lm-light-orange);
+  --holder: var(--gb-lm-light-green);
+  --wrong: var(--gb-lm-light-red);
+  --wrong-edge: var(--gb-lm-dark-red);
+  --hover-ground: var(--gb-lm-bg0-soft);
+  --prio-high: var(--gb-lm-dark-red);
+  --prio-mid: var(--gb-lm-dark-green);
+  --prio-low: var(--gb-lm-dark-gray);
+  --prio-high-ink: var(--gb-lm-bg0-hard);
+  --empty-ink: var(--gb-lm-fg4);
+  --count-ink: var(--gb-lm-fg3);
+  --backlog-ink: var(--gb-lm-light-purple);
+}

@@ -1,0 +1,9 @@
+{
+  "name": "kanban",
+  "version": "0.67.0",
+  "exec": "go",
+  "args": ["run", "."],
+  "language": "go",
+  "description": "Kanban board of agent work for this project: /kanban prints the board's counts and URL, the kanban tool files Cards into inbox, reads the Columns a session works, edits a Card it filed, comments on Cards and moves them between Columns, and the board page opens one Card at a time, where a hand edits it, comments on it, closes it or deletes it.",
+  "enabled": true
+}

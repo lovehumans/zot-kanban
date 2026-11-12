@@ -1,0 +1,77 @@
+{{/*
+  Help modal: the board's workflow and the rules an agent works by, on the board page itself.
+  It says nothing about which Cards are on the board, so it travels in the one request a human already
+  makes - no route, no fetch, and no swap: it is rendered outside #board, so the 3 s poll never touches
+  it. The board's rules have one published home, so this quotes them through web.go's
+  agentRules rather than restating them; a paraphrase here would be a copy that can drift.
+
+  Its wording follows the human's notes on the card: an Action, not a
+  "door" - the glossary's word is for the code and its decision notes - and as few words as the rules allow. What
+  each step says is said of whoever can do it, since only an agent can move a Card into done. Nothing
+  here explains an id, which a Card's face shows well enough, but it does say which edge a priority stripe
+  sits on and what the two marks mean: which hand filed a Card is a convention a face cannot show without a
+  word, and this is the page a human opens to learn one. No shortcut is named that web/board.js does not actually
+  answer. The markup borrows the Card view's close control, glyph class
+  and sprite id included, because a symbol the page has no rule for renders at its default size.
+*/}}
+<dialog id="help-modal" class="card-modal help-modal" aria-label="How this board works" closedby="any">
+  <form method="dialog" class="modal-actions"><button class="modal-close glyph" aria-label="close this help"
+      title="close this view - nothing is changed"><svg class="i" aria-hidden="true"><use href="#icon-x"/></svg></button></form>
+  <h2>How this board works</h2>
+  <p>A <strong>Card</strong> is one unit of work, and the board - its Columns and the Comments written on
+  each Card - is all that you and an agent share.</p>
+
+  <h3>The path a Card takes</h3>
+  <ol>
+    <li>File a Card in <strong>inbox</strong> - a title and a sentence or two - and triage it there: a
+    priority, then a move to <strong>ready</strong>, <strong>backlog</strong> or <strong>blocked</strong>.
+    Nothing is worked while it waits in inbox.</li>
+    <li>An agent takes a Card from <strong>ready</strong> into <strong>doing</strong>, where the board
+    holds it to that agent.</li>
+    <li>Comment on a Card in <strong>doing</strong>, or move it to <strong>blocked</strong> with a Comment
+    saying why.</li>
+    <li>Drag a Card to other columns and vertically to re-order.</li>
+    <li>An agent moves it into <strong>done</strong> when its work is committed, naming that commit; no
+    move of yours can put a Card there. Closing it is yours alone, and a closed Card waits in
+    <strong>closed</strong>, which the page shows only when you ask for it.</li>
+  </ol>
+
+  <h3>Reading a Card's face</h3>
+  <ul>
+    <li>A priority is a stripe on a Card's edge, in a quiet colour. A Card you filed wears it on the left edge;
+    a Card an agent filed wears it on the right, and a Card an agent is holding keeps it on the left inside the
+    orange edge below.</li>
+    <li>A blue * before a title means an agent filed that Card and nobody has opened it since; opening it takes
+    the asterisk off. The same blue on a Comment count counts Comments an agent filed.</li>
+    <li>A thick orange edge means an agent is holding that Card, and a drag is how you let it go.</li>
+  </ul>
+
+  <h3>Your actions</h3>
+  <ul>
+    <li>Add a Card, and decide what waits in <strong>inbox</strong>.</li>
+    <li>Close a Card, or delete one - an agent can do neither.</li>
+    <li>Release a Card an agent left claimed, by dragging it out of <strong>doing</strong>.</li>
+  </ul>
+
+  <h3>The agent's actions</h3>
+  <ul>
+    <li>Take a Card from <strong>ready</strong> into <strong>doing</strong>, which claims it for that agent.</li>
+    <li>Move a Card between the other Columns, and Comment on it, including why it is blocked.</li>
+    <li>File a finished Card into <strong>done</strong> with its commit's hash, or give a Card up back to
+    the Column it came from.</li>
+  </ul>
+
+  <details class="help-rules">
+    <summary>The rules an agent works by</summary>
+    <p>{{agentRules}}</p>
+  </details>
+
+  <h3>This page</h3>
+  <p>Esc or a click beside this dialog closes it; a Card view closes the same two ways, and they ask first when
+  you have typed words that are not saved - the close button never asks, because it already says it changes
+  nothing. Type / and only Cards matching it are shown, while a
+  Comment count keeps each Card's total. Ctrl+S saves the Card you have open, and Ctrl+Enter files what you are
+  typing - a new Card in the strip, a Comment in the modal; both keys write the form your caret is in, and Cmd is
+  the same key as Ctrl here - this page answers either name without distinguishing them, so where a control's
+  tooltip says Ctrl your keyboard's Cmd is meant. The board redraws itself every few seconds.</p>
+</dialog>

@@ -1,0 +1,8 @@
+{{- $why := ruleFor .Name -}}
+<section id="col-{{.Name}}" class="col col-{{.Name}}" data-column="{{.Name}}"{{if $why}} data-no-drop{{end}}>
+  <h2>{{.Name}}<span class="count">{{len .Cards}}</span></h2>
+  {{if $why}}<p class="col-rule">{{$why}}</p>{{end}}
+  {{if .Cards}}{{range .Cards}}{{template "card.fragment.html" .}}{{end}}{{else}}
+  <p class="empty">no cards</p>
+  {{end}}
+</section>

@@ -1,0 +1,8 @@
+{{/* data-version is the polled fragment naming the version that wrote it, against the document's own stamp on
+    <html>: a version bump changes the bytes every dynamic route serves, but a page a browser is holding keeps its
+    own footer until it is re-read, and this swap root is the only part of it the 3 s poll re-renders. When the two
+    differ web/board.js says so beside the board. */}}
+<div id="board" class="columns" data-version="{{.Version}}" hx-get="/api/board" hx-trigger="every 3s" hx-swap="outerHTML">
+  {{if .Error}}<p class="board-error">board not readable: {{.Error}}</p>{{end}}
+  {{range .Columns}}{{template "column.fragment.html" .}}{{end}}
+</div>

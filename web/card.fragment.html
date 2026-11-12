@@ -1,0 +1,39 @@
+{{/* The board shows one Card, it does not print one: title, how long ago a move or an edit moved it, Comments it
+    carries and, when more than one session holds Cards on this board, which one holds this one. No id is painted
+    here: an id is the title again as a slug, and the Card's own view prints it beside copy id,
+    while `data-card` carries it for the drag, the click and the swap that opens that view, and the filter still
+    reads it off the Card's fields. A Card an Agent is holding wears a thick edge: that is
+    what a human needs in order to let it go,
+    since the way a claim is released is a human drag. Whose it is comes back when there is more than
+    one holder to tell apart, and card.detail.html names it whatever the board looks like, with how long ago.
+    A Card in done is no one's to let go of - it is not draggable and its claim only says who did the work - so
+    it wears neither the edge nor the name here. A Card in closed is the same case for the same reason, and a
+    stronger one: the only way out of that Column is reopening, so a drag would be a Move the Board refuses.
+    movable in board.go says which Cards those two are, once for the edge, the drag and the name,
+    because it is the same fact the Board's Column gate refuses a move out of those Columns with.
+    What is not here lives in that modal, which a click swaps in.
+    The same element is the drag source and the click target, which is why web/board.js turns draggable off
+    while a Card is open.
+    A Card in done that names no commit, or names one the repository behind the board has no commit of, says so
+    on its face: done is a commit's to reach, and a board that kept that to itself would be listing work as
+    finished that nothing has committed.
+    A Card an Agent filed that nobody has opened since carries a light-blue asterisk before its title, in every
+    Column: that is the board saying which Cards arrived since the human last looked, and opening the Card is
+    what clears it - not age, not a move. A held Card wears the asterisk and the orange edge at once,
+    because being new and being worked on are two different facts.
+    The comment count is painted in the same blue when an Agent has filed a Comment on this Card since anybody
+    opened it: the face already prints how many Comments there are, so the number is what changes colour rather
+    than a mark standing beside it, and opening the Card takes the colour off because opening it is reading them.
+    Which door captured a Card is shown by the one mark a face has room for without adding a word: an Agent's Card
+    wears its Priority stripe on the right edge and a human's on the left. The stripe is the same three
+    quiet hues and there is still one of them, so the fact the board adds is which side of the Card it sits on, and
+    a Card whose Origin was never recorded is nobody's to mark. A Claim can only be held by an Agent's door, so a
+    held Card already says whose it is through the thick orange edge and keeps its stripe on the left inside that
+    edge.
+*/}}
+<article class="card p-{{.Priority}}{{if and .Claim (movable .)}} claimed{{end}}{{if agentOrigin .}} by-agent{{end}}" data-card="{{.ID}}"{{if movable .}} draggable="true"{{end}}
+         hx-get="/api/card/{{.ID}}" hx-target="#card-modal" hx-swap="innerHTML"
+         hx-on::after:swap="ctx.target.showModal()">
+  <p class="title">{{if .Unseen}}<span class="new-mark" title="filed by an agent, and not opened since">*</span> {{end}}{{.Title}}</p>
+  <p class="meta">{{since .Updated}}{{if .Comments}} &middot; {{if .UnseenComments}}<span class="new-comments" title="Comments an agent filed, and nobody has opened the Card since">{{end}}{{len .Comments}} {{if eq (len .Comments) 1}}comment{{else}}comments{{end}}{{if .UnseenComments}}</span>{{end}}{{end}}{{if and .Claim .NamesHolder (movable .)}} &middot; held by <span class="claim">{{.Claim.Session}}</span>{{end}}{{if .Contradiction}} &middot; <span class="contradiction">{{.Contradiction}}</span>{{end}}</p>
+</article>

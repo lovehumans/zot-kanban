@@ -1,0 +1,39 @@
+{{/* One Card's Comments, and the way a human files one. This is the region the modal shows and the region a
+    filed Comment answers with, so the same markup serves both, and it is the region a stale form re-reads:
+    the list and the form travel together, which is what puts a filed Comment where it was typed and hands
+    back the ordinal the next one will take.
+
+    The form names the ordinal its Comment means to be (comment_id), the number the model layer would assign
+    anyway. That is what makes filing harmless rather than append-only: the same text filed twice is
+    recognised as the Comment it already is, and an ordinal somebody else filled first is refused as a conflict
+    the human is told about, rather than quietly taking the next number.
+
+    It is inside the modal, outside #board, for the modal's own reason: the 3 s poll re-swaps the board, and
+    half-typed text must not be pulled out from under the human. The reason for a filing the board
+    refused has its own slot here, beside the form, because a Comment is refused while the human is looking at
+    this region. The button says *add comment #N* with the bubble-and-plus glyph beside it: the ordinal is what no
+    glyph says, and *add* is the word a human's button says while `comment` stays the name of the door it posts to
+    and of the Agent's tool. Its tooltip names Ctrl+Enter, which the words on the button cannot
+    say themselves. A Comment long enough to run past the ten lines the modal shows is a
+    native <details> whose summary *is* its text: the sheet clamps that summary to ten lines - wrapped lines
+    counted, which is what a cut at ten source lines got wrong - and the whole Comment is the thing one click
+    opens and shuts again, so the text travels once and no JavaScript of its own is involved.
+
+    A Comment is printed as the plain Markdown its file holds, in a container that can hold the blocks
+    web/markdown.js emits when a browser reads it as Markdown: a <div> rather than a <p>, because a
+    paragraph cannot contain a paragraph and the renderer writes one. The <summary> keeps its own element for the
+    same reason it keeps the text - a folded Comment is opened and shut, not duplicated - and the sheet clamps
+    what it renders rather than what it prints. */}}
+<div class="comments" id="card-comments">
+  {{if .Comments}}{{range .Comments}}<div class="comment">
+    <p class="comment-meta">{{owner .}}{{if .ID}} #{{.ID}}{{end}}{{with since .At}} &middot; {{.}}{{end}}</p>
+    {{if foldable .Text}}<details class="comment-fold"><summary class="comment-text">{{.Text}}</summary></details>{{else}}<div class="comment-text">{{.Text}}</div>{{end}}
+  </div>{{end}}{{else}}<p class="comment-none">no comments on this Card yet</p>{{end}}
+  <form class="card-edit card-comment" hx-post="/api/card/{{.ID}}/comment" hx-target="#card-comments" hx-swap="outerHTML">
+    <label for="card-comment">Add a comment on this Card &mdash; this one will be #{{nextCommentID .Comments}}</label>
+    <input type="hidden" name="comment_id" value="{{nextCommentID .Comments}}">
+    <textarea id="card-comment" name="text" rows="3" required></textarea>
+    <p class="card-error" id="comment-error"></p>
+    <div class="modal-actions"><button type="submit" class="modal-save" title="Ctrl+Enter files this comment, from any field of this form"><svg class="i" aria-hidden="true"><use href="#icon-comment"/></svg> add comment #{{nextCommentID .Comments}}</button></div>
+  </form>
+</div>
