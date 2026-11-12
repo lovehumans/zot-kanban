@@ -761,7 +761,8 @@ func underPath(path, dir string) bool {
 }
 
 // The board names the install serving it, because the words a human types to update one copy are
-// different for the other: `just install` moves the project-local one, `zot ext install` the global one.
+// different for the other: the copy under <project>/.zot/extensions is the one an install run from the
+// project moves, `zot ext install` the global one.
 const (
 	installLocal  = "local"
 	installGlobal = "global"

@@ -174,7 +174,7 @@
 
   document.addEventListener("htmx:error", function (e) {
     // A poll that never got an answer is not a refusal. A 4xx or 5xx is an answer and the listener above routes its
-    // reason to the slot the human is looking at; a fetch that throws - a closed zot session, a stopped `just serve`,
+    // reason to the slot the human is looking at; a fetch that throws - a closed zot session, a stopped `zot-kanban serve`,
     // a tunnel that is down, or one still hanging when its 60 s timeout fires - has no answer to show, and htmx
     // fires htmx:error with the request's ctx but no ctx.response (web/htmx.js), which nothing on this page listens
     // to. So the board a human is staring at can be a page out of a dead process, silent about why nothing they file
@@ -182,7 +182,7 @@
     // it stays while the board is out and clears itself on the next one that answers.
     var ctx = e.detail && e.detail.ctx;
     if (!ctx || ctx.response) return; // an answer arrived; that is the listener above's to explain
-    say("the board is not answering - the server is offline or wedged. Start it again (`just serve`, or a zot " +
+    say("the board is not answering - the server is offline or wedged. Start it again (`zot-kanban serve`, or a zot " +
         "session); this page follows on its own");
   });
 

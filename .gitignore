@@ -3,8 +3,8 @@
 /zot-kanban.exe
 *.test
 
-# Scratch a zot session leaves when this clone is opened as a project, and the copy `just install`
-# stages there
+# Scratch a zot session leaves when this clone is opened as a project, and the project-local copy
+# placed under ./.zot/extensions
 /.zot-tmp
 /.zot/extensions/
 

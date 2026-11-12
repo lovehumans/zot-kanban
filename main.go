@@ -18,7 +18,7 @@ import (
 	"github.com/patriceckhart/zot/packages/agent/ext"
 )
 
-const version = "0.67.0" // must match extension.json, which is what zot ext list reports
+const version = "0.67.1" // must match extension.json, which is what zot ext list reports
 
 // The command and the agent tool share a name, the way zot-review names both its command and its
 // tool "review". The extension is named for what it is, without the project prefix, because inside a

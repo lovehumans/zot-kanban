@@ -83,9 +83,9 @@
       extension is answering for it: `local` under <project>/.zot/extensions, `global` under zot's state
       directory, `repo` for a build run straight from the tree (`zot --ext .`, or a `zot-kanban serve` out
       of a repository build). The board's files always sit in the project, so naming the directory twice
-      said nothing; naming the install says the one thing the page cannot be read without - whether a
-      `just install` or a `zot ext install` is the one that moved what you are looking at (installKind in
-      web.go). */}}
+      said nothing; naming the install says the one thing the page cannot be read without - whether a copy
+      placed under <project>/.zot/extensions or a `zot ext install` is the one that moved what you are looking at
+      (installKind in web.go). */}}
   <p class="project">{{tilde .CWD}} ({{.Install}})</p>
   <p class="refresh">drag a card onto the line it lands on &middot; click a card to open it &middot; {{ruleFor "done"}}</p>
   {{/* The filter, at the right end of the header, is live: it asks on a pause in typing rather than on a
@@ -193,7 +193,7 @@
 {{/* The version the board is running sits leftmost in the footer rather than in the header: the header is the board's own
      voice, and this is a fact about the binary answering. Everything the page fetches - the stylesheet, the
      scripts, the routes - is embedded in that binary, so the board is only as new as what is installed, and this
-     is the string to expect after a just install. `zot-kanban version` prints this same string; `zot ext list`
+     is the string to expect after an install. `zot-kanban version` prints this same string; `zot ext list`
      reports the same version under the extension's own name, `kanban`, because the footer names the board and the
      manifest names the extension.
      The footer's three items are separated by a middot each, the way its header line separates its hints; the

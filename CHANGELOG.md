@@ -5,6 +5,9 @@ The version `extension.json` names is the version this file names, and every ver
 moved. This chronicle begins at 0.60.0; what came before it is named only by the version numbers
 those bumps left behind.
 
+## v0.67.1 - Human readme
+- Humanized the README.md by hand, since nobody likes reading a clanker's wall of text.
+
 ## v0.67.0 — the sheet is cut into a palette
 
 - The board's styling is now two sheets: `web/gruvbox.css` holds the palette and what each colour means
