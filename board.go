@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // A Card's State is its directory; its identity is the filename stem and never
@@ -93,6 +94,16 @@ type Claim struct {
 	At      time.Time `json:"at,omitempty"`
 }
 
+// Step is one small piece of work on a Card, filed by the session working it: an ordinal this Card issued and
+// never reissues, a name short enough to say one small task in one line, and whether it is done. A Step is not
+// a Card and nothing about a Card leaks into it: no Column, no id the Board issues, no Order, no Claim, no
+// Comments, and it dies with the Card's file.
+type Step struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Done bool   `json:"done"`
+}
+
 type Card struct {
 	Title    string    `json:"title"`
 	Body     string    `json:"body,omitempty"`
@@ -109,6 +120,17 @@ type Card struct {
 	Origin string `json:"origin,omitempty"`
 
 	Comments []Comment `json:"comments,omitempty"`
+
+	// Steps are this Card's small pieces of work, in the order they were filed. They exist for the session
+	// working the Card: a step marked done is the board holding what the agent did, so a Card read after a
+	// context compaction still says where the work got to.
+	Steps []Step `json:"steps,omitempty"`
+
+	// StepsIssued is the highest step ordinal this Card has ever issued, which is what keeps "never reused"
+	// true across a delete: the highest-numbered step can be deleted, and without this record the next step
+	// filed would take that number back, so a session's memory of what "step 3" meant would stop being
+	// trustworthy.
+	StepsIssued int `json:"steps_issued,omitempty"`
 
 	Column string `json:"-"` // the directory it was found in
 	ID     string `json:"-"` // the filename stem
@@ -137,6 +159,12 @@ type Card struct {
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
 
+// slugLimit is how long the readable half of a Card id may be, and it is the length a Step's name is capped at
+// (stepNameLimit): both are the words the board prints on a line, an id being the Card's title again as a slug,
+// and neither is worth reading past that. A slug is ASCII throughout - slugRe is what leaves it - so
+// counting it in bytes is counting it in characters.
+const slugLimit = 42
+
 // commentID reports the id the Comment with this text ended up with, which is what a confirmed write
 // quotes back to the agent.
 func (c Card) commentID(text string) int {
@@ -161,6 +189,50 @@ func nextCommentID(comments []Comment) int {
 	return last + 1
 }
 
+// repairStepOrdinals gives every step a number of its own: a missing ordinal, or one another step already holds,
+// becomes the next free number above every ordinal this Card holds or has ever issued, and that highest number is
+// answered back so both the reading and the step door count from the same record. It is the whole of what the board
+// repairs about a step, and it is run on the same words by normalize when a Card is read and by applyStep when a
+// step is written, which is what keeps "the ordinal you read is the step it names" true across a hand that wrote
+// two steps with one number.
+func repairStepOrdinals(steps []Step, issued int) ([]Step, int) {
+	if issued < 0 {
+		issued = 0
+	}
+	for _, s := range steps {
+		if s.ID > issued {
+			issued = s.ID
+		}
+	}
+	taken := make(map[int]bool, len(steps))
+	next := issued + 1
+	for i := range steps {
+		s := &steps[i]
+		if s.ID <= 0 || taken[s.ID] {
+			s.ID = next
+			next++
+		}
+		if s.ID > issued {
+			issued = s.ID
+		}
+		taken[s.ID] = true
+	}
+	return steps, issued
+}
+
+// nextStepID is the ordinal the next Step on this Card will take. Like a Comment's, a step ordinal is an ordinal
+// within one Card and is never reused: it is read off the highest number this Card ever issued rather than off
+// the steps it still holds, because a step can be deleted and the number it wore stays spent.
+func nextStepID(steps []Step, issued int) int {
+	last := issued
+	for _, s := range steps {
+		if s.ID > last {
+			last = s.ID
+		}
+	}
+	return last + 1
+}
+
 // slug turns a title into the human-readable half of a card id.
 func slug(title string) string {
 	s := slugRe.ReplaceAllString(strings.ToLower(title), "-")
@@ -168,8 +240,12 @@ func slug(title string) string {
 	if s == "" {
 		return "card"
 	}
-	if len(s) > 40 {
-		return s[:40]
+	if len(s) > slugLimit {
+		// Trimmed on the cut end too, because a title whose limit-th character falls in a run of punctuation
+		// would end the readable half on a "-": the mark that separates it from the date and from a -2 suffix,
+		// and so a dash a hand would read as part of the name. The half cannot come out empty - s begins with a
+		// letter or digit, since the Trim above took the leading run off.
+		return strings.TrimRight(s[:slugLimit], "-")
 	}
 	return s
 }
@@ -208,6 +284,15 @@ func (c *Card) normalize(now time.Time) {
 		}
 	}
 	c.Comments = kept
+
+	// A Step's ordinal is the one thing about it the board cannot read without: it is how a session names the
+	// step it means, so a missing one, or a number two steps were handed, becomes the next free ordinal above
+	// everything this Card has issued. Nothing else about a step is repaired here. A name's length, a newline it
+	// carries and how many steps a Card holds are the step door's rules alone, so a Card whose steps a hand
+	// wrote reads as the nine steps it says it is.
+	if len(c.Steps) > 0 {
+		c.Steps, c.StepsIssued = repairStepOrdinals(c.Steps, c.StepsIssued)
+	}
 }
 
 // Board is one project's board: a directory of column directories.
@@ -1416,6 +1501,11 @@ const (
 	ruleIntoClosedAgent = " - closing a done Card is the modal's button or zot-kanban close, and both are the human's"
 	// ruleCloseFrom is why Close answers only a Card in done.
 	ruleCloseFrom = "close is the door a done Card has"
+	// ruleCloseSteps is why Close answers a Card in done that is still open on one of its own steps: closing keeps
+	// a Card as finished work, and a step the Card wrote and never marked says the work it named is not over.
+	// The refusal says the open steps before it, so the words a human acts on - the box to tick - are
+	// already on the line.
+	ruleCloseSteps = "close it once no step on it is open"
 	// ruleOutDone and ruleOutClosed are what a Card is answered with when a mover asks for it out of a Column
 	// nothing lands in: unfinished work is a Card of its own, and closed is reopened rather than moved.
 	ruleOutDone   = "a Card in done is done - unfinished work gets a Card of its own, and a wrong done is a commit to undo"
@@ -1457,6 +1547,148 @@ func movable(c Card) bool {
 // wears its Priority stripe on the right edge rather than the left. A Card whose Origin was never
 // recorded is nobody's to mark, so its stripe stays where a human's sits.
 func agentOrigin(c Card) bool { return c.Origin == byAgent }
+
+// commentCountTitle is the sentence a Card's face keeps when its Comment count leaves the word out and prints a
+// number beside Tabler's bubble: the words a reader is told when they rest on the count, the same arrangement the
+// step count has (as 0.70.0). An unread count names itself unread, because the colour that
+// lights it says only that much; a read one states the total. Like stepCount it is a reading of the
+// Card, never a field of its file.
+func commentCountTitle(c Card) string {
+	word := "Comments"
+	if len(c.Comments) == 1 {
+		word = "Comment"
+	}
+	if c.UnseenComments {
+		return fmt.Sprintf("%d %s an agent filed, and nobody has opened the Card since", len(c.Comments), word)
+	}
+	return fmt.Sprintf("%d %s on this Card", len(c.Comments), word)
+}
+
+// stepCount is the "x/n" a Card's face prints for its steps: how many are done over how many the Card holds. A
+// Card with no steps prints nothing at all, which keeps a Card nobody stepped exactly as it was. Like
+// Contradiction it is a reading of the Card, never a field of its file.
+func stepCount(c Card) string {
+	if len(c.Steps) == 0 {
+		return ""
+	}
+	done := 0
+	for _, s := range c.Steps {
+		if s.Done {
+			done++
+		}
+	}
+	return fmt.Sprintf("%d/%d", done, len(c.Steps))
+}
+
+// orderedSteps are a Card's steps in ordinal order, which is the order they were filed in and the order a Card
+// is read in. The Card's own slice stays where it is: a hand that wrote the steps out of order keeps them in its
+// file as it wrote them and reads back sorted rather than rewritten.
+func orderedSteps(c Card) []Step {
+	if len(c.Steps) == 0 {
+		return nil
+	}
+	return stepsOrdered(append([]Step{}, c.Steps...))
+}
+
+// stepsOrdered sorts a slice of steps by the ordinal the Card issued them with. It is the same reading the
+// page's list and the Close door's refusal are built from, so neither carries its own sort.
+func stepsOrdered(steps []Step) []Step {
+	sort.Slice(steps, func(i, j int) bool { return steps[i].ID < steps[j].ID })
+	return steps
+}
+
+// unmetSteps are the steps a finished Card still shows undone: an unmet step, which the board paints on the
+// face and the modal lists in the red of what does not hold up. done costs the sha of the commit that carries the
+// change, and a step is not that evidence in either direction, so a Move into done is never refused over an open
+// step - only keeping a Card as finished work is, which is what close answers. A kept Card
+// in closed carries the same reading, because its done-ness is the one its move into done rested on.
+func unmetSteps(c Card) []Step {
+	if c.Column != DoneColumn && c.Column != ClosedColumn {
+		return nil
+	}
+	return openSteps(c.Steps)
+}
+
+// openSteps are the ones of a Card's steps it still shows undone, in ordinal order. It is the reading the face's
+// unmet paint, the Close door's refusal and the shell's reason for leaving a Card in done are all built from, so
+// none of them carries its own filter or sort.
+func openSteps(steps []Step) []Step {
+	var open []Step
+	for _, s := range stepsOrdered(append([]Step{}, steps...)) {
+		if !s.Done {
+			open = append(open, s)
+		}
+	}
+	return open
+}
+
+// openStepsOf is the Close door's reading of a Card file's steps: which of them the Card still shows undone, in
+// ordinal order, read off the bytes the door has already read rather than by turning the file into a Card the way
+// a render does. A Card whose steps a hand wrote out of shape is named as what could not be read.
+func openStepsOf(raw []byte) ([]Step, error) {
+	fields, err := decodeCard(raw)
+	if err != nil {
+		return nil, err
+	}
+	steps, err := stepList(fields["steps"])
+	if err != nil {
+		return nil, err
+	}
+	return openSteps(steps), nil
+}
+
+// openStepWords names the steps a refused close found open, ordinal first and name after it: the ordinal is how a
+// session marks a step, and the name is what a human reads in the modal to decide which box to tick before
+// closing the Card again.
+func openStepWords(open []Step) string {
+	if len(open) == 1 {
+		return fmt.Sprintf("step %d %q is still open", open[0].ID, open[0].Name)
+	}
+	named := make([]string, 0, len(open))
+	for _, s := range open {
+		named = append(named, fmt.Sprintf("%d %q", s.ID, s.Name))
+	}
+	return fmt.Sprintf("steps %s are still open", strings.Join(named, ", "))
+}
+
+// stepRung is one rung of the ladder a Card's steps paint in its own view: either the step this Card holds at
+// that ordinal, or the ordinal itself when the step that wore it was erased. A rung is not a step and carries no
+// state beyond which step it holds - it is how the numbers a Card spent stay visible on the Card that spent
+// them, so a hand reading the ladder reads a spent number as one rather than as a step whose name went missing.
+type stepRung struct {
+	Step   Step
+	Erased bool
+}
+
+// cardLadder is a Card's ladder read for its own view: every ordinal the Card issued, up to the highest it ever
+// filed, with the steps it holds drawn as rungs and the numbers it erased between them drawn as rungs of their
+// own. The count a Card wears, the red of an unmet step and the cap on its live steps are readings of the steps
+// held - stepCount, openSteps, maxLiveSteps - and only a Card's own view draws the wider one, because a spent
+// number says something about the Card's numbering rather than about the work left to do. A Card whose ladder a
+// hand wrote with a number no rung wore prints that number as erased, which is what its file says it issued.
+func cardLadder(c Card) []stepRung {
+	held := orderedSteps(c)
+	last := c.StepsIssued
+	if n := len(held); n > 0 && held[n-1].ID > last {
+		last = held[n-1].ID
+	}
+	rungs := make([]stepRung, 0, last)
+	at := 0
+	for ordinal := 1; ordinal <= last; ordinal++ {
+		if at < len(held) && held[at].ID == ordinal {
+			rungs = append(rungs, stepRung{Step: held[at]})
+			at++
+			continue
+		}
+		rungs = append(rungs, stepRung{Step: Step{ID: ordinal}, Erased: true})
+	}
+	return rungs
+}
+
+// stepsFull is the modal's reading of the cap the step door counts: a Card already holding as many live steps as
+// that door will file, where the filing control is drawn shut rather than asked. A Card whose steps a hand wrote
+// into its own file is full by this reading too, which is why the control shuts rather than the door moving.
+func stepsFull(c Card) bool { return len(c.Steps) >= maxLiveSteps }
 
 // doorWords is the answer in the words this door's reader can act on: a mover at the Agent's tool is told what
 // to send to make the move legal, and a human drag is not told something it cannot send.
@@ -1857,6 +2089,330 @@ func agentEditGate(cardID, col string, raw []byte) error {
 	return nil
 }
 
+// The step door's limits, and the refusals that name the doors a Card does have. Like the two an Agent's edit
+// door carries, these sentences reach an Agent and an install ships no ADRs, so they say what to send rather
+// than where the rule comes from.
+const (
+	// stepNameLimit is how long a Step's name may be, counted in runes: long enough to name one small task in
+	// one line, short enough that a Card whose steps need a paragraph was two Cards.
+	stepNameLimit = 42
+	// maxLiveSteps is how many steps a Card holds at once. The cap is what keeps a Step one small piece of
+	// work rather than a plan, and it is counted on the steps a Card holds, not on the numbers it has issued.
+	maxLiveSteps = 7
+
+	// stepUndo and stepErase are the two things a named ordinal may be asked to do besides being marked done.
+	// erase is this door's word for taking a step off a Card: delete stays the verb for taking a Card off the
+	// board, and the two are different things to take away. The tool's op, the modal's glyph and the word the
+	// ladder prints under a spent ordinal all say erase.
+	stepUndo  = "undo"
+	stepErase = "erase"
+
+	// ruleStepDoing names the Column a Card's steps are worked from, and the move that puts a Card there.
+	ruleStepDoing = `a Card's steps are worked in doing: move {card, "doing"} takes the Card up and claims it for this session`
+	// ruleStepClaim names what a Card sitting in doing is missing when this session holds no Claim on it.
+	ruleStepClaim = `a Card's steps are written by the session holding it: move {card, "doing"} claims this one for you`
+	// ruleStepClosed names the doors a Card in closed does have, as ruleEditClosed names them for the edit door. It
+	// is asked of both step doors, because closed is the one Column no step verb reaches at all.
+	ruleStepClosed = `a Card in closed answers no step from any door - reopening it is a hand's, and only then is it a Card that can be stepped on`
+	// ruleStepHeld is the refusal the hand's door carries and the Agent's does not: the Claim that lets a session
+	// write a held Card's steps is what shuts a browser's boxes on that same Card.
+	ruleStepHeld = "a Card a session is holding is not a browser's to step on - drag it out of doing first, and the Claim goes with it"
+	// ruleStepDone is said instead of ruleStepDoing for a Card already filed there, because the move that rule
+	// names is no door a done Card goes through.
+	ruleStepDone = `a Card filed done is not stepped - a hand reopens it, or writes its file`
+	// ruleStepReword is the boundary a Step keeps from a Comment: its name is filed, and never reworded.
+	ruleStepReword = `a Step's name is not reworded: name "text" for a new step, or "ordinal" alone for the step to mark`
+)
+
+// What a step Write did, which is the fact the verb's sentence is built from.
+const (
+	stepFiled       = "filed"
+	stepMarked      = "marked"
+	stepUnmarked    = "unmarked"
+	stepErased      = "erased"
+	stepAlreadyDone = "already done"
+	stepAlreadyOpen = "already open"
+	stepAlreadyFile = "already filed"
+)
+
+// StepRequest is one call on the step door: the Card, the session asking, and either the name of the step to
+// file or the ordinal of the step to mark, undo or erase.
+type StepRequest struct {
+	Card    string
+	Session string
+	Text    string
+	Ordinal int
+	Op      string
+}
+
+// StepWrite is what the step door answers: the Write, and the step it touched with what it did to that step.
+// The two are not readable off the Card afterwards - an erased step is no longer on it, a Card that changed
+// nowhere says only that nothing moved - and the door hands them over the way FileComment hands over the
+// Comment it filed.
+type StepWrite struct {
+	Write
+	Step Step
+	Did  string
+}
+
+// Step writes steps on a Card through the door a hand reaches: without the refusals only the Agent's door has - the
+// Column and Claim gates that keep an Agent's steps on the Card it is working - but with the one the Agent's door
+// does not carry, that a Card a session is holding in doing is not a browser's to step on (handStepGate).
+// The modal's boxes write through here; the Card's own file is the other hand's door and answers no gate at all,
+// which is why a hand can write nine steps into a file the door would refuse to file one at a time.
+func (b *Board) Step(req StepRequest, now time.Time) (StepWrite, error) {
+	return b.step(req, now, false)
+}
+
+// StepAsAgent is the Agent's door onto the same writes, with the gate a hand is never given: a Card's steps
+// belong to the session holding that Card in doing. The gate reads the Claim and not the Origin, because a step
+// is what a session says about the work it is doing on any Card - including one a human captured - whereas the
+// Origin gate is about whose words a Card is.
+func (b *Board) StepAsAgent(req StepRequest, now time.Time) (StepWrite, error) {
+	return b.step(req, now, true)
+}
+
+// step is what both doors write: the arguments settled first, then the Card read, then the gate asked inside
+// the same locked window the write lands in, then one decision applied to the Card's JSON by
+// rewrite - which is where a step that changes nothing is known to change nothing and is written nowhere.
+//
+// A step Write lights no mark and clears none: the new mark and the comment mark say *nobody has read this since
+// an Agent said something*, and only the Comment door lights one. A Card whose steps an
+// Agent filed is not a Card a human has to re-open to see: its step count is printed on its face.
+func (b *Board) step(req StepRequest, now time.Time, byAgent bool) (StepWrite, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	switch req.Op {
+	case "", stepUndo, stepErase:
+	default:
+		return StepWrite{}, badInput(`step: "op" is %s or %s, and %q is neither`, stepUndo, stepErase, req.Op)
+	}
+	text := strings.TrimSpace(req.Text)
+	if req.Op != "" && req.Ordinal == 0 {
+		return StepWrite{}, badInput(`step %s: needs "ordinal", the ordinal of the step on this Card to %s`, req.Op, req.Op)
+	}
+	if req.Ordinal < 0 {
+		return StepWrite{}, badInput("step ordinal %d: a step's ordinal is a whole number", req.Ordinal)
+	}
+	if text != "" && req.Ordinal != 0 {
+		return StepWrite{}, badInput("card %s: %s", req.Card, ruleStepReword)
+	}
+	if text == "" && req.Ordinal == 0 {
+		return StepWrite{}, badInput(`step: name "text" for a step to file or "ordinal" for the step to mark`)
+	}
+	if text != "" {
+		if n := utf8.RuneCountInString(text); n > stepNameLimit {
+			return StepWrite{}, badInput("a step's name is at most %d characters, and this one is %d: a step names one small task",
+				stepNameLimit, n)
+		}
+		if strings.ContainsAny(text, "\n\r") {
+			return StepWrite{}, badInput("a step's name is one line: %q carries a newline", text)
+		}
+	}
+	col, path, raw, err := b.cardFile(req.Card)
+	if err != nil {
+		return StepWrite{}, err
+	}
+	// A Card in closed answers no step from either door, so this one sits in the door every caller goes through:
+	// the only way out of closed is a hand's reopen, and a browser that had this Card open before it was closed
+	// has no Board door its click could reach.
+	if col == ClosedColumn {
+		return StepWrite{}, conflict("card %s: %s", req.Card, ruleStepClosed)
+	}
+	if byAgent {
+		if err := agentStepGate(req.Card, col, raw, req.Session); err != nil {
+			return StepWrite{}, err
+		}
+	} else if err := handStepGate(req.Card, col, raw); err != nil {
+		return StepWrite{}, err
+	}
+	var touched StepWrite
+	written, err := rewrite(col, req.Card, path, raw, now, func(fields map[string]any) error {
+		st, did, err := applyStep(fields, req)
+		if err != nil {
+			// Named by Card, because a Card whose steps the board cannot read is a Card the human has to go and
+			// fix.
+			return fmt.Errorf("card %s: %w", req.Card, err)
+		}
+		touched.Step, touched.Did = st, did
+		return nil
+	})
+	if err != nil {
+		return StepWrite{}, err
+	}
+	touched.Write = written
+	return touched, nil
+}
+
+// agentStepGate is asked of the Agent's step door before a Card's steps are written, and reads the Claim rather
+// than the Origin: a Card a human filed is still the Card an Agent is working, and its steps are that session's
+// to say. Every refusal here is a conflict: a Card in done is one because it sits in a Column this
+// door does not answer, which is what a delete asked of finished work answers too, and a Card outside doing or
+// held by another session is one because the door that would make it right - move - exists and this session has
+// not asked it. closed is refused above it, in the door both callers share.
+func agentStepGate(cardID, col string, raw []byte, session string) error {
+	if strings.TrimSpace(session) == "" {
+		return fmt.Errorf("card %s: %w, and an Agent's step names the session that wrote it", cardID, ErrNoSession)
+	}
+	if col == DoneColumn {
+		// A conflict rather than bad input, the way a delete asked of a done Card answers: the request
+		// is well-formed and it is the Column the Card sits in that refuses it. It names no move either way, since
+		// no door carries a Card back out of done for an Agent to step it from.
+		return conflict("card %s: %s", cardID, ruleStepDone)
+	}
+	held, err := cardClaim(raw)
+	if err != nil {
+		return fmt.Errorf("card %s: %w", cardID, err)
+	}
+	if col != DoingColumn {
+		return conflict("card %s is in %s: %s", cardID, col, ruleStepDoing)
+	}
+	if held == nil {
+		return conflict("card %s: %s", cardID, ruleStepClaim)
+	}
+	if held.Session != session {
+		return conflict("card %s is held by session %s%s - only that session writes its steps", cardID, held.Session, claimWords(held))
+	}
+	return nil
+}
+
+// handStepGate is asked of the step door a hand reaches - the modal's box, and the shell if a step verb is ever
+// added to it - and it carries the one refusal the Agent's gate does not: a Card a session is holding in doing is
+// not a Card a browser steps on. The Claim is the hinge in both directions; the Agent writes a held Card's steps
+// because it is the session working it, and the human gets the boxes back on that Card by dragging it out of
+// doing, which is what releases the Claim. A hand outranks a Claim everywhere else on this board - a
+// drag, an edit, a Comment - and a step is the one place it does not, because a step is a word about the work in
+// progress rather than a change to the Card's words.
+//
+// It reads the Column before the Claim, because a Claim in done only records who did the work: a done Card keeps
+// its boxes whatever its file's claim line says.
+func handStepGate(cardID, col string, raw []byte) error {
+	if col != DoingColumn {
+		return nil
+	}
+	held, err := cardClaim(raw)
+	if err != nil {
+		return fmt.Errorf("card %s: %w", cardID, err)
+	}
+	if held != nil {
+		return conflict("card %s is held by session %s%s: %s", cardID, held.Session, claimWords(held), ruleStepHeld)
+	}
+	return nil
+}
+
+// claimWords is when a Claim was taken, said the way both step doors say it. An empty answer is a Claim with no
+// timestamp on it - a hand wrote that field into the file - and a refusal that guesses a time is worse than one
+// that says nothing about it.
+func claimWords(held *Claim) string {
+	if held == nil || held.At.IsZero() {
+		return ""
+	}
+	return " since " + held.At.Format(time.RFC3339)
+}
+
+// steppable is the modal's reading of handStepGate: which Card's steps the page may put a live box on. It is asked
+// of board.go rather than spelled out in a template, the way card.fragment.html asks movable and agentOrigin, so the
+// boxes a human sees and the refusals the same click can get come from one reading.
+func steppable(c Card) bool { return stepsLocked(c) == "" }
+
+// stepsLocked is why the page draws this Card's boxes disabled, in the words the step door itself would refuse a
+// click with: a Card a session is holding in doing, and a Card kept in closed. An empty answer is a Card whose steps
+// a hand may mark - inbox, ready, blocked, a doing Card nobody has taken up, and every done Card, whatever its
+// file's claim line says.
+func stepsLocked(c Card) string {
+	switch {
+	case c.Column == ClosedColumn:
+		return ruleStepClosed
+	case c.Column == DoingColumn && c.Claim != nil:
+		return ruleStepHeld
+	}
+	return ""
+}
+
+// applyStep files a step, or marks, un-marks or erases the one a named ordinal holds, and answers with the
+// step it touched and what it did to it. Filing the same name twice is the step it already is, and marking one
+// already done changes nothing: the Card's fields are left exactly as they were so rewrite writes nothing and
+// the door answers "no change". That is what makes "mark a step done the moment it is done" safe to
+// obey twice - which is the case a session working from a compacted context arrives at.
+//
+// The 42-character name and the seven-step cap are refused here and nowhere else, so a Card whose steps a hand
+// wrote in its own file keeps all nine of them and every long name in them.
+func applyStep(fields map[string]any, req StepRequest) (Step, string, error) {
+	steps, err := stepList(fields["steps"])
+	if err != nil {
+		return Step{}, "", err
+	}
+	// The decision is made on the numbers the Card is read as, so an ordinal a session read a moment ago is still
+	// the step it names after this Write, and the number a filing takes is above every one of them.
+	steps, issued := repairStepOrdinals(steps, issuedSteps(fields, steps))
+	if text := strings.TrimSpace(req.Text); text != "" {
+		for _, s := range steps {
+			if s.Name == text {
+				return s, stepAlreadyFile, nil
+			}
+		}
+		if len(steps) >= maxLiveSteps {
+			return Step{}, "", badInput("a Card holds %d steps at most, and this one already holds %d: a Card needing an eighth step is two Cards",
+				maxLiveSteps, len(steps))
+		}
+		fresh := Step{ID: nextStepID(steps, issued), Name: text}
+		fields["steps"] = append(steps, fresh)
+		fields["steps_issued"] = fresh.ID
+		return fresh, stepFiled, nil
+	}
+	at := -1
+	for i, s := range steps {
+		if s.ID == req.Ordinal {
+			at = i
+		}
+	}
+	if at < 0 {
+		// Bad input rather than a conflict: re-reading the Card cannot make this number one this Card holds,
+		// and the refusal names the ordinals it does.
+		return Step{}, "", badInput("no step %d on this Card; its steps are %s", req.Ordinal, heldOrdinals(steps))
+	}
+	switch req.Op {
+	case "":
+		if steps[at].Done {
+			return steps[at], stepAlreadyDone, nil
+		}
+		steps[at].Done = true
+		fields["steps"] = steps
+		return steps[at], stepMarked, nil
+	case stepUndo:
+		if !steps[at].Done {
+			return steps[at], stepAlreadyOpen, nil
+		}
+		steps[at].Done = false
+		fields["steps"] = steps
+		return steps[at], stepUnmarked, nil
+	default: // stepErase
+		gone := steps[at]
+		kept := append(steps[:at], steps[at+1:]...)
+		if len(kept) == 0 {
+			delete(fields, "steps")
+		} else {
+			fields["steps"] = kept
+		}
+		// The numbers this Card spent outlive the steps that wore them: the record is kept even when the last
+		// step is erased, so no later step is handed an ordinal a session already worked under.
+		fields["steps_issued"] = issued
+		return gone, stepErased, nil
+	}
+}
+
+// heldOrdinals names the step ordinals a Card holds, for the refusal that says an ordinal is not one of them.
+func heldOrdinals(steps []Step) string {
+	if len(steps) == 0 {
+		return "none"
+	}
+	names := make([]string, 0, len(steps))
+	for _, s := range steps {
+		names = append(names, fmt.Sprintf("%d", s.ID))
+	}
+	return strings.Join(names, ", ")
+}
+
 // Delete takes a Card off the board into .kanban/trash/. Nothing there is listed, polled or
 // opened, so the Card is gone from the board while its file - and with it its id, its Comments and any field
 // this program does not know about - is still there to be restored, by Restore, by a plain mv, or by git for
@@ -1926,24 +2482,37 @@ func (b *Board) Reopen(cardID string, now time.Time) (Write, error) {
 // No Agent door and no drag offers a close: it is the modal's button and the shell's verb, which is the same
 // line delete is held on, because a tool that can close can empty a human's done column in one wrong
 // call.
+//
+// A done Card still open on one of its own steps is not closed either. Closing is the door that keeps a Card as
+// finished work, and a step the Card wrote and never marked says the work it described is not over - so the
+// refusal names the open steps and the modal's box is the door that clears them. Reaching done is a
+// different decision and is not refused over a step: done costs the sha of the commit that carries the change,
+// and a step is no such evidence in either direction.
 func (b *Board) Close(cardID string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	col, _, _, err := b.cardFile(cardID)
+	col, _, raw, err := b.cardFile(cardID)
 	if err != nil {
 		return err
 	}
 	if col != DoneColumn {
 		return conflict("%s: card %s is in %s", ruleCloseFrom, cardID, col)
 	}
+	open, err := openStepsOf(raw)
+	if err != nil {
+		return fmt.Errorf("card %s: %w", cardID, err)
+	}
+	if len(open) > 0 {
+		return conflict("card %s: %s - %s", cardID, openStepWords(open), ruleCloseSteps)
+	}
 	return b.offBoard(cardID, b.closedDir())
 }
 
 // CloseAllDone is the bulk door over finished work: every done Card whose done-ness holds up is closed, and a
 // Card that contradicts its own commit stays in done, where the board prints the finding and the singular close
-// is still the door a human can take it through. The bulk door checks because it moves a
-// column a human is not looking at; the singular door does not, because there the human is looking at the Card
-// the finding is printed on.
+// is still the door a human can take it through. A Card still open on one of its own steps
+// is left there too, in the same red the face paints it in: the bulk door checks what a human is looking at when
+// it moves a column, and here it would be keeping as finished work a Card whose own steps say otherwise.
 //
 // It is the CLI's verb and no one else's: no web request and no Agent action asks for it, which is why this
 // repository's own done column is emptied by a human typing it and not by a session.
@@ -1957,7 +2526,7 @@ func (b *Board) CloseAllDone() ([]Card, []Card, error) {
 		if c.Column != DoneColumn {
 			continue
 		}
-		if c.Contradiction != "" {
+		if c.Contradiction != "" || len(unmetSteps(c)) > 0 {
 			skipped = append(skipped, c)
 			continue
 		}
@@ -2208,6 +2777,12 @@ func cardBytes(fields map[string]any) ([]byte, error) {
 	if comments, err := commentList(fields["comments"]); err == nil && comments != nil {
 		fields["comments"] = comments
 	}
+	// The same reason as the Comments: a decoded file holds steps as []any of maps, and a map encodes its keys
+	// in name order, so a write that touched no step would re-flow every step block on the Card. Read through
+	// stepList, a step keeps the struct's own field order.
+	if steps, err := stepList(fields["steps"]); err == nil && steps != nil {
+		fields["steps"] = steps
+	}
 	return json.MarshalIndent(fields, "", "  ")
 }
 
@@ -2295,6 +2870,50 @@ func commentList(v any) ([]Comment, error) {
 		return nil, fmt.Errorf("the comments on this Card are not a list of Comments: %w", err)
 	}
 	return list, nil
+}
+
+// stepList reads whatever the file's steps value is into Steps, the same way commentList reads a hand's
+// Comments; a hand-broken value comes back as an error naming the offending JSON.
+func stepList(v any) ([]Step, error) {
+	if v == nil {
+		return nil, nil
+	}
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var list []Step
+	if err := json.Unmarshal(raw, &list); err != nil {
+		return nil, fmt.Errorf("the steps on this Card are not a list of steps: %w", err)
+	}
+	return list, nil
+}
+
+// issuedSteps is the highest step ordinal a Card has issued, read off the JSON fields a Write is deciding on
+// rather than off the struct. A Card that recorded none has issued as many numbers as it holds steps, and one
+// whose record a hand wrote as a negative is a Card that has issued none of its own.
+func issuedSteps(fields map[string]any, steps []Step) int {
+	last := 0
+	switch v := fields["steps_issued"].(type) {
+	case json.Number:
+		if n, err := v.Int64(); err == nil && n > 0 {
+			last = int(n)
+		}
+	case float64:
+		if v > 0 {
+			last = int(v)
+		}
+	case int:
+		if v > 0 {
+			last = v
+		}
+	}
+	for _, s := range steps {
+		if s.ID > last {
+			last = s.ID
+		}
+	}
+	return last
 }
 
 // CountByColumn reports the card count per column in draw order, in one read. closed comes after every Column

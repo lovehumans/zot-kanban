@@ -18,7 +18,7 @@ import (
 	"github.com/patriceckhart/zot/packages/agent/ext"
 )
 
-const version = "0.67.2" // must match extension.json, which is what zot ext list reports
+const version = "0.70.0" // must match extension.json, which is what zot ext list reports
 
 // The command and the agent tool share a name, the way zot-review names both its command and its
 // tool "review". The extension is named for what it is, without the project prefix, because inside a
@@ -48,7 +48,8 @@ finishing moves the Card back to the Column it came from, which releases the cla
 session that died is the human's drag to release. Work the human asks for in chat still gets a Card first, into
 inbox for triage: move it into ready yourself only when the human permitted that in chat, and name the permission
 in a Comment. A Card face in a Column names the Card by its title and prints no id, so an id is copied from a
-Card's own view.`
+Card's own view. Work a Card's steps as you go, mark one done the moment it is done, and read a Card you have not
+looked at since before you touch it again.`
 
 // toolActions is what this tool's six actions are and what each one takes, said once beside the rules they
 // serve. Nothing is required at schema level: what an action needs is named by the refusal that answers a call
@@ -57,13 +58,16 @@ const toolActions = `add {title, body?, priority?} files one Card per unit of wo
 edit {card, title?, body?, priority?} changes what a Card says where it sits, and changes only the fields it
 names; it answers a Card filed by the tool, and refuses one a hand filed or one sitting in closed.
 read {column?} lists the Columns a session works - inbox, ready, doing, blocked - each Card with its id, priority,
-title, Comment count and the session holding it; backlog and done appear when named. read {card} answers that one
-Card from whatever Column holds it - Column, file, body, Comments in full, priority, order, dates, commit and
-claim - because a copied id is a question about one Card; naming a Card and a Column together is refused.
+title, step count and Comment count, and the session holding it; backlog and done appear when named. read {card}
+answers that one Card from whatever Column holds it - Column, file, body, steps, Comments in full, priority, order,
+dates, commit and claim - because a copied id is a question about one Card; naming a Card and a Column together is
+refused.
 comment {card, text} files a note on a Card, including why it is blocked; comment {card, id, text} corrects that
-Comment - your own from this session, and only while no Comment written by a hand follows it. move {card, column}
-carries a Card to another Column by renaming its file; into done it carries commit, the sha of the commit that
-carries the change, and into doing it claims the Card for this session.`
+Comment - your own from this session, and only while no Comment written by a hand follows it. step {card, text}
+files one small task on a Card this session holds in doing; step {card, ordinal} marks one done, and
+{card, ordinal, op:"undo"|"erase"} opens it again or erases it. move {card, column} carries a Card to another
+Column by renaming its file; into done it carries commit, the sha of the commit that carries the change, and into
+doing it claims the Card for this session.`
 
 // toolFileRule is the rule about reaching a Card with a file tool, and it belongs to the tool rather than to
 // help(): help is also what a human reads at a shell, and for a human the board is a directory tree to edit with
@@ -94,6 +98,7 @@ the kanban tool, and what each action takes
   edit    {"card", "title"?, "body"?, "priority"?}
   read    {"column"?} or {"card"}
   comment {"card", "text", "id"?}
+  step    {"card", "text"} or {"card", "ordinal", "op"?}   // op is "undo" or "erase"
   move    {"card", "column", "commit"?}
 
 What a tool action does not offer - closing, reopening, deleting, restoring - is a hand's, at the board or at the
@@ -107,6 +112,10 @@ type toolArgs struct {
 	CardID    string `json:"card"`
 	Text      string `json:"text"`
 	CommentID int    `json:"id"`
+	// Op and StepOrdinal belong to the step door: the ordinal names one of a Card's own steps, and op says whether
+	// that step is opened again or erased. A bare ordinal marks it done.
+	Op          string `json:"op"`
+	StepOrdinal int    `json:"ordinal"`
 	// Title, Body and Priority are named-or-omitted rather than plain strings: an edit that names a title alone
 	// must leave the body where it is, and a field typed as a string cannot tell "left out" from "set to nothing".
 	Title    *string `json:"title"`
@@ -133,12 +142,14 @@ func named(v *string) string {
 const toolSchema = `{
   "type": "object",
   "properties": {
-    "action":   {"type": "string", "enum": ["add", "comment", "edit", "move", "read"], "description": "the action this call asks for; add is the default; edit changes only what it names"},
+    "action":   {"type": "string", "enum": ["add", "comment", "edit", "move", "read", "step"], "description": "the action this call asks for; add is the default; edit changes only what it names"},
     "title":    {"type": "string", "description": "add and edit: one line naming the work"},
     "body":     {"type": "string", "description": "add and edit: one or two sentences"},
     "priority": {"type": "string", "enum": ["high", "mid", "low"], "description": "add and edit: how the human triages it"},
-    "card":     {"type": "string", "description": "the Card's id: comment, edit and move work on it; read names one Card instead of a Column"},
-    "text":     {"type": "string", "description": "comment: the Comment to file"},
+    "card":     {"type": "string", "description": "the Card's id: comment, edit, move and step work on it; read names one Card instead of a Column"},
+    "text":     {"type": "string", "description": "comment: the Comment to file; step: the name of the step to file"},
+    "ordinal":  {"type": "integer", "description": "step: which of this Card's steps, as read {card} printed it; a bare ordinal marks it done"},
+    "op":       {"type": "string", "description": "step: \"undo\" opens one already marked done, \"erase\" erases one; a step erased keeps its ordinal off the later ones"},
     "id":       {"type": "integer", "description": "comment: the ordinal of the Comment to correct, of this session, while no hand-written Comment follows it"},
     "column":   {"type": "string", "enum": ["backlog", "inbox", "ready", "doing", "blocked", "done", "closed"], "description": "move: the Column to carry the Card into - closed is not one of them; read: the Column to list, where an absent column means the four a session works: inbox, ready, doing, blocked"},
     "commit":   {"type": "string", "description": "move into done: the sha of the commit that carries the change, which done costs"}
@@ -223,8 +234,10 @@ func (k *kanban) callTool(args json.RawMessage) ext.ToolResult {
 		said, err = k.moveCard(in)
 	case "read":
 		said, err = k.readBoard(in)
+	case "step":
+		said, err = k.stepCard(in)
 	default:
-		err = fmt.Errorf("kanban: no action %q; this tool has add, comment, edit, move and read", in.Action)
+		err = fmt.Errorf("kanban: no action %q; this tool has add, comment, edit, move, read and step", in.Action)
 	}
 	if err != nil {
 		return k.refused(err)
@@ -376,6 +389,54 @@ func commentSaid(filed Write, ask int, text string) (said, notify string) {
 	return said, "kanban: " + said
 }
 
+// stepCard works one of a Card's steps: a name files one, an ordinal marks it, and an ordinal with op opens it
+// again or erases it. The Board answers this door only for the session holding the Card in doing, and says so in
+// its own words (StepAsAgent). A step is not a Comment: the words that name the step are not reworded, so the
+// door has no correction form.
+func (k *kanban) stepCard(in toolArgs) (answer, error) {
+	cardID := strings.TrimSpace(in.CardID)
+	if cardID == "" {
+		return answer{}, errors.New("kanban step: needs \"card\", the id of the Card whose step this is")
+	}
+	touched, err := k.board.StepAsAgent(StepRequest{
+		Card:    cardID,
+		Session: k.session,
+		Text:    strings.TrimSpace(in.Text),
+		Ordinal: in.StepOrdinal,
+		Op:      in.Op,
+	}, time.Now())
+	if err != nil {
+		return answer{}, err
+	}
+	said, notify := stepSaid(touched)
+	return answer{toAgent: said, toHuman: notify}, nil
+}
+
+// stepSaid is the sentence an Agent gets for one step, and the notice the human sees beside it: the ordinal, the
+// Card it is on, and what happened to it - filed, marked, opened again, erased. A call that changed nothing is
+// answered without a line for the human, the way a Comment the Card already says is.
+func stepSaid(touched StepWrite) (said, notify string) {
+	switch touched.Did {
+	case stepAlreadyFile:
+		return fmt.Sprintf("no change: card %s already files that step: %s", touched.ID, touched.Step.Name), ""
+	case stepAlreadyDone:
+		return fmt.Sprintf("no change: step %d on card %s is already marked done: %s", touched.Step.ID, touched.ID, touched.Step.Name), ""
+	case stepAlreadyOpen:
+		return fmt.Sprintf("no change: step %d on card %s is already open: %s", touched.Step.ID, touched.ID, touched.Step.Name), ""
+	}
+	switch touched.Did {
+	case stepUnmarked:
+		said = fmt.Sprintf("step %d on card %s opened again: %s", touched.Step.ID, touched.ID, touched.Step.Name)
+	case stepErased:
+		said = fmt.Sprintf("step %d erased from card %s: %s", touched.Step.ID, touched.ID, touched.Step.Name)
+	case stepMarked:
+		said = fmt.Sprintf("step %d on card %s marked done: %s", touched.Step.ID, touched.ID, touched.Step.Name)
+	default:
+		said = fmt.Sprintf("step %d filed on card %s: %s", touched.Step.ID, touched.ID, touched.Step.Name)
+	}
+	return said, "kanban: " + said
+}
+
 // moveCard carries a Card from one Column to another, which is the file rename kept as the only way
 // a Card changes Column. The rules it inherits from the model layer are set there:
 // done is reachable only with the sha of the commit that carries the change, so a move into done that names
@@ -478,6 +539,11 @@ func listingLines(boardRoot string, read Read) []string {
 			default:
 				line += fmt.Sprintf("  (%d comments)", n)
 			}
+			// A Card's steps are said on a listing too, because the count is what tells a session picking a Card
+			// from the shelf that some of its work is already done.
+			if steps := stepCount(c); steps != "" {
+				line += "  " + steps + " steps"
+			}
 			if c.Claim != nil && c.Claim.Session != "" {
 				line += "  held by " + c.Claim.Session
 			}
@@ -508,6 +574,19 @@ func cardLines(card Card, path string) []string {
 	}
 	if body := strings.TrimSpace(card.Body); body != "" {
 		lines = append(lines, "body", indented(body))
+	}
+	// A Card with no steps says nothing about steps: the door is empty on such a Card rather than a heading with
+	// nothing under it. A step is told by its ordinal, whether it is done, and its name - the three a session needs
+	// to mark one without guessing which one it means, and the reason the ordinal is printed at all.
+	if n := len(card.Steps); n != 0 {
+		lines = append(lines, "steps "+stepCount(card))
+		for _, s := range orderedSteps(card) {
+			state := "·"
+			if s.Done {
+				state = "✓"
+			}
+			lines = append(lines, indented(fmt.Sprintf("%d %s %s", s.ID, state, s.Name)))
+		}
 	}
 	if n := len(card.Comments); n == 0 {
 		lines = append(lines, "no comments")
@@ -732,12 +811,22 @@ const usageText = `zot-kanban - project-scoped kanban board for zot
   zot-kanban serve [--port N]       serve this project's board without a zot session; a port you name is bound exactly, a default one walks up when taken
   zot-kanban url                    print the URL of the board being served right now
   zot-kanban close <id>             close a done Card: its file moves to .kanban/closed/, kept and not shown
-  zot-kanban close --all-done       close every done Card whose commit evidence holds up, leaving a contradicting one in done
+  zot-kanban close --all-done       close every done Card whose commit evidence and whose steps hold up, leaving one that fails either in done
   zot-kanban reopen <id>            bring a closed Card back into done, filed at the end of that Column's Order
   zot-kanban delete <id>            take a Card off the board: its file moves to .kanban/trash/ (never a done or closed Card)
   zot-kanban restore <id> [col]     put a deleted Card back into a Column (inbox when none is named)
   zot-kanban version                print the extension version
 `
+
+// whyLeftInDone is the bulk door's reason for leaving a done Card where it is: the finding that its commit
+// evidence does not hold up, or a step the Card wrote and never marked - the same two findings the singular close
+// refuses over, said here in the words the shell prints.
+func whyLeftInDone(c Card) string {
+	if c.Contradiction != "" {
+		return c.Contradiction
+	}
+	return openStepWords(unmetSteps(c))
+}
 
 // cli is the standalone face of the extension, kept apart from extension mode so it can be tested
 // without a host. serve exists because a board is useful outside a zot session - a triage pass in
@@ -839,7 +928,7 @@ func cli(args []string, stdout, stderr io.Writer) int {
 		cfs.Usage = func() {
 			fmt.Fprint(stdout, "usage: zot-kanban close <id>\n       zot-kanban close --all-done\n\n"+usageText)
 		}
-		allDone := cfs.Bool("all-done", false, "close every done Card whose commit evidence holds up")
+		allDone := cfs.Bool("all-done", false, "close every done Card whose commit evidence and whose steps hold up")
 		if err := cfs.Parse(fs.Args()[1:]); err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return 0
@@ -861,7 +950,7 @@ func cli(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stdout, "closed %d done Card(s) into %s, where the board reads them on demand\n",
 				len(closed), board.closedDir())
 			for _, c := range skipped {
-				fmt.Fprintf(stdout, "left %s in done: %s\n", c.ID, c.Contradiction)
+				fmt.Fprintf(stdout, "left %s in done: %s\n", c.ID, whyLeftInDone(c))
 			}
 			return 0
 		}

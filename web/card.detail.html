@@ -45,7 +45,14 @@
     Columns, the modal closes on the saved event, and the next poll redraws what the Column holds.
     Who filed the Card is said here and not on the Card face, because the asterisk a new Card carries already
     says that much on the board, and the two hands a Card can come from are worth naming when a Card is being
-    read rather than scanned. */}}
+    read rather than scanned.
+    A Card's steps are card.steps.html, swapped in here between the body and the Comments and answered on its own by
+    a step write - the same arrangement the Comments region below has, so working a rung re-renders the smallest thing
+    that write changed and leaves this edit form holding what it holds. The region is
+    drawn whether or not the Card holds a step yet, because its field is how a hand files the first one and its
+    ladder prints the rungs the Card has spent. What it refuses to edit stays refused here: the
+    order is the order the steps were filed in, a name is not reworded, and the ordinal is printed because it is how
+    a session names the step it means. */}}
 <article class="card detail p-{{.Priority}}">
   <form method="dialog" class="modal-actions"><button class="modal-close glyph" aria-label="close this Card view"
       title="close this view - the Card is not changed"><svg class="i" aria-hidden="true"><use href="#icon-x"/></svg></button></form>
@@ -65,6 +72,7 @@
     <div class="modal-actions"><button type="submit" class="modal-save glyph" aria-label="save this Card"
         title="save this Card - its title, body and priority - Ctrl+S from anywhere in this Card view"><svg class="i" aria-hidden="true"><use href="#icon-save"/></svg></button></div>
   </form>
+  {{template "card.steps.html" (ladderOf .)}}
   {{template "card.comments.html" .}}
   {{if eq .Column "done"}}
   <p class="card-close"><button type="button" class="modal-close-card"

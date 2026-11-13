@@ -42,7 +42,11 @@ project's board on your own machine, so two people share it through git, not thr
 
 ## Usage
 
-## The Board
+### The Board
+
+<a href="board_example.webp">
+  <img src="board_example.webp" width="100%" alt="The board in a browser: the backlog, inbox, ready, doing, blocked and done Columns side by side, each holding Cards with their priority stripe, their bar of step rungs and a Comment count as a number beside a bubble; the two Cards in doing each name the session holding them, and the Cards in done are dimmed." />
+</a>
 
 | Column | What it holds |
 |---|---|
@@ -53,6 +57,12 @@ project's board on your own machine, so two people share it through git, not thr
 | `blocked` | Cards that cannot move; the reason is a Comment on the Card |
 | `done` | finished work, each Card naming the commit that carries it |
 | `closed` | done work put out of the board's sight but kept |
+
+### The Card
+
+<a href="card_example.webp">
+  <img src="card_example.webp" width="440" alt="One Card open in the modal: its id, Column, order and stamps, held by a session; the Priority switch of three named segments; the body; the ladder printed as Steps 3/5 with its done rungs struck through, beside a notice quoting why this ladder is shut; the field that files a step; and below, the two Comments with the field that files the next one." />
+</a>
 
 The path one Card takes:
 
@@ -74,25 +84,38 @@ Default url is `http://127.0.0.1:7498/` (it walks upward if that port is held, a
 own.
 
 - **Drag** a Card to move or sort.
-- **Open** a Card. Read, edit, comment. 
+- **Open** a Card. Read, edit, comment, and work its steps: write a name in the field under the ladder to file a
+  step, tick its box to mark it done or untick it to open it again, and press the trash glyph beside it to erase it -
+  its rung then prints as *erased* and the number it wore stays spent. A Card a session is holding in `doing` has its
+  steps shut - drag it out of `doing` first, or be in `done`. A Card kept in `closed` has no steps to work from either
+  door.
 - **Help** page shows details.
 - **New Card** at the top files one into `inbox`.
 - **Ctrl+S** to save changes. 
-- **/ to filter cards** narrows the board to Cards whose title, id, body or comments contain every keyword.
+- **/ to filter cards** narrows the board to Cards whose title, id, body, comments or step names contain every keyword.
 - **theme** select: `auto`, `light` or `dark`.
+- A Card that carries steps prints how far through them it is on its face as `2/3`, with the count spelled out when
+  you rest the pointer on it, and wears a bar under its meta line: one rung per step, in order, filled for each one
+  done. A Card in `done` with a step nobody marked done keeps the red paint a contradicted Card wears, and its open
+  rungs are painted in that red too.
+- A Card that carries Comments prints their count on its face as a number beside a bubble, no word: rest the pointer
+  on it and it says `3 Comments on this Card`, and a bubble lit in the board's blue counts Comments an agent filed
+  that nobody has opened since.
 - **delete** a Card in a working Column (it asks first, and moves the file to `.kanban/trash/`) 
-- **close** a Card in `done`, **reopen** a Card in `closed`. 
+- **close** a Card in `done`, **reopen** a Card in `closed`. Close refuses a done Card that still has a step open and
+  names which ones; drag the Card off `done` to work it again, or tick the steps first.
 
 ### In the zot TUI
 
 - a startup line with the board address, which the board also opens in your browser.
 - `/kanban` — the Card count per Column and the board URL.
-- the `kanban` agent tool — five actions. 
+- the `kanban` agent tool — six actions. 
   - `add` files a Card into `inbox` (`title`, `body`, `priority`). 
   - `edit` changes what one Card says where it sits - `title`, `body`, `priority`, and only the ones it names - and answers a Card its own tool filed, never one you captured by hand, nor one kept in `closed`. 
-  - `read` lists the Columns a session works - `inbox`, `ready`, `doing`, `blocked` (`backlog`, `done` and `closed` only when you name them), or names one Card by its id and answers it in full, Comments included. 
-  - `comment` files a Comment on a Card, or corrects one the agent's own session wrote. `move` carries a Card to another Column, and needs 
-  - `commit` - the SHA of the commit that carries the change - to move into `done`.
+  - `read` lists the Columns a session works - `inbox`, `ready`, `doing`, `blocked` (`backlog`, `done` and `closed` only when you name them), each Card with its step count when it has steps, or names one Card by its id and answers it in full, Comments and steps included. 
+  - `comment` files a Comment on a Card, or corrects one the agent's own session wrote. 
+  - `step` files a step on a Card you hold in `doing` (`card`, `text`), or marks one done (`card`, `ordinal`); `op` is `"undo"` to open a step marked done or `"erase"` to erase one, which leaves its ordinal spent and prints its rung as *erased* in the Card view. An ordinal is never reused, so one you read stays the number it names. 
+  - `move` carries a Card to another Column, and needs `commit` - the SHA of the commit that carries the change - to move into `done`.
 - the **tool log** above your input while the tool works: one line per thing it did - a move, a filed Comment - each naming the Card and quoting none of it. Stays until your turn.
 
 

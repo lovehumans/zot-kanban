@@ -42,14 +42,23 @@
     a Card an agent filed wears it on the right, and a Card an agent is holding keeps it on the left inside the
     orange edge below.</li>
     <li>A blue * before a title means an agent filed that Card and nobody has opened it since; opening it takes
-    the asterisk off. The same blue on a Comment count counts Comments an agent filed.</li>
+    the asterisk off. A bubble beside a number counts the Comments a Card carries, and the same blue on it counts
+    Comments an agent filed.</li>
     <li>A thick orange edge means an agent is holding that Card, and a drag is how you let it go.</li>
+    <li>A Card with steps prints how far through them it is as 2/3, and a line of rungs under its meta
+    line: one per step, filled for each one done. A Card in <strong>done</strong> still showing a step open wears the
+    red a contradicted Card wears, its open rungs with it.</li>
   </ul>
 
   <h3>Your actions</h3>
   <ul>
     <li>Add a Card, and decide what waits in <strong>inbox</strong>.</li>
-    <li>Close a Card, or delete one - an agent can do neither.</li>
+    <li>File a step in a Card view by writing its name under the ladder, tick one to mark it done, untick one to open
+    it again, or press the trash glyph beside it to erase it - its rung then says *erased* and its number stays spent,
+    never handed to a later step. A Card an agent is holding has its steps shut - they are that agent's to work until
+    you drag the Card out of <strong>doing</strong>.</li>
+    <li>Close a Card, or delete one - an agent can do neither. A done Card still showing a step open will not close:
+    tick its steps, or drag it back off <strong>done</strong>.</li>
     <li>Release a Card an agent left claimed, by dragging it out of <strong>doing</strong>.</li>
   </ul>
 
@@ -70,7 +79,7 @@
   <p>Esc or a click beside this dialog closes it; a Card view closes the same two ways, and they ask first when
   you have typed words that are not saved - the close button never asks, because it already says it changes
   nothing. Type / and only Cards matching it are shown, while a
-  Comment count keeps each Card's total. Ctrl+S saves the Card you have open, and Ctrl+Enter files what you are
+  Comment count - the number and its bubble - keeps each Card's total. Ctrl+S saves the Card you have open, and Ctrl+Enter files what you are
   typing - a new Card in the strip, a Comment in the modal; both keys write the form your caret is in, and Cmd is
   the same key as Ctrl here - this page answers either name without distinguishing them, so where a control's
   tooltip says Ctrl your keyboard's Cmd is meant. The board redraws itself every few seconds.</p>

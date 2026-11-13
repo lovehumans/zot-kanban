@@ -1,0 +1,46 @@
+{{/* One Card's steps: the ladder a hand reads and the two controls a hand works steps with. This is the region the
+    modal shows, the region a step write that changed the ladder's shape answers with, and the region a refusal
+    leaves its reason in, so the same markup serves all three, the way card.comments.html serves a filed Comment.
+
+    A rung of the ladder is drawn in card.step.html, shared with the answer that swaps one rung, and the ladder here
+    is drawn over every ordinal the Card has spent: a live step wears its controls, and an erased one wears a muted
+    rung saying only *erased*, because a step erased keeps its ordinal off the later ones and the Card's own view is
+    where that gap is admitted. The count above the ladder counts live steps only, so a spent
+    rung never moves a Card's x/n, and it is the same reading the Card's face prints, taken from stepCount rather
+    than worked out here; it wears the unmet red on a finished Card still showing a step undone.
+
+    The field at the bottom files a step by name, and filing is the only way a step's name is ever written: a name is
+    filed and never reworded, and no control here edits one. The field announces no ordinal, because the
+    ordinal is the door's own business; it refuses a name longer than the door would file, and its tooltip says what
+    this Card is out of room on - the name limit, or the seven live steps a Card holds at most, in which case the
+    field and its button are drawn shut together (stepNameLimit, stepsFull, stepFieldHint in board.go and web.go).
+    A filed step is born open, so the rung it lands on is one a hand can mark or erase at once.
+
+    Filing is open on a done Card: a hand can add a step to finished work, and that is how a finished Card is made to
+    hold up again or made unmet - the paint, not a refusal. The controls are drawn shut wherever no Board
+    door answers this Card's steps, and the sentence under them is the one that door would refuse a click with -
+    stepsLocked in board.go, quoted rather than restated, the way the page quotes movable and ruleFor. It
+    is drawn as a notice - framed in the quiet blue and wearing the info glyph - because it is the board telling a
+    reader why a control is shut rather than another line of the Card's text; the glyph says *notice* where the words
+    say what, and it is aria-hidden beside them (board.css). Two
+    Cards are locked: one a session is holding in doing, whose steps that session writes, and the way back is a drag
+    out of doing that releases the Claim; and one kept in closed, which answers no step from any
+    door and is unlocked by reopening it. A done Card keeps its controls live whatever its
+    file's claim line says.
+
+    The reason for a write the board refused has its own slot here, beside the ladder, because this is where the human
+    was looking when it was refused (web/board.js routes a /step reason into it). A step write that moved one rung
+    answers the rung alone, so that slot is not recreated by it and the page empties it once a write has worked. */}}
+<div class="steps-region" id="card-steps">
+  {{if .Card.Steps}}
+  <p class="steps-head">Steps <span class="steps-count{{if unmetSteps .Card}} unmet{{end}}" title="{{len .Card.Steps}} steps on this Card, {{stepCount .Card}} of them done">{{stepCount .Card}}</span></p>
+  {{end}}
+  <ul class="steps-list">{{range .Rungs}}{{template "card.step.rung" .}}{{end}}</ul>
+  <p class="card-error" id="steps-error"></p>
+  {{with stepsLocked .Card}}<p class="steps-locked"><svg class="i" aria-hidden="true"><use href="#icon-info"/></svg> {{.}}</p>{{end}}
+  <form class="card-edit step-file" hx-post="/api/card/{{.Card.ID}}/step" hx-target="#card-steps" hx-swap="outerHTML">
+    <label for="card-step">File a step on this Card</label>
+    <input type="text" id="card-step" name="text" placeholder="one small task" maxlength="{{stepNameLimit}}" required{{if or (stepsFull .Card) (stepsLocked .Card)}} disabled{{end}} title="{{stepFieldHint .Card}}">
+    <div class="modal-actions"><button type="submit" class="modal-save"{{if or (stepsFull .Card) (stepsLocked .Card)}} disabled{{end}} title="{{if stepsFull .Card}}{{stepFieldHint .Card}}{{else}}Ctrl+Enter files this step, from its field{{end}}"><svg class="i" aria-hidden="true"><use href="#icon-plus"/></svg> Step</button></div>
+  </form>
+</div>

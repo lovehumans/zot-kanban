@@ -1,0 +1,39 @@
+{{/* One rung of a Card's ladder, drawn on the Card it belongs to. This is the markup a Card's own view draws each
+    rung with, and the whole answer a step write that moved only one rung sends back: a mark, an opening, or a box
+    stale about a step already in the state it asked for is answered with the rung it moved rather than the whole
+    ladder, so a rung costs what a rung costs and the words a human is typing into the filing field beside the
+    ladder stay where they were.
+
+    A rung is drawn one of two ways. A live step wears the box a hand marks with and the glyph that erases it. The
+    box carries the action its own state names: an open box posts the ordinal, which says "mark this one done", and
+    a ticked box posts it with op=undo, which says "open this one again"; the glyph posts op=erase, the same word the
+    Agent's door and the model door use for the same thing. Erasing is asked for
+    twice, in the button's own words and in the browser's native confirmation, because it is the one step write with
+    no way back from the page: the name is gone, and only git holds what it was.
+
+    An erased rung is a spent ordinal with no step on it. It prints muted, says only *erased*, and carries no
+    control: a step erased keeps its ordinal off the later ones, and the rung is the Card's own view admitting that
+    gap rather than a state one can click back into.
+
+    The ordinal is printed rather than inferred from position, because the rung numbers are what a session names a
+    step with. A name is never edited here: a Step's name is filed and never reworded. The controls are
+    drawn disabled where no Board door answers this Card's steps, and the region below says why in the door's own
+    words (card.steps.html, stepsLocked in board.go). */}}
+{{define "card.step.rung"}}
+<li class="step{{if .Rung.Step.Done}} done{{end}}{{if .Rung.Erased}} erased{{end}}">
+  {{- if .Rung.Erased}}
+  <span class="step-ordinal">{{.Rung.Step.ID}}</span> <span class="step-erased">erased</span>
+  {{- else}}
+  <label class="step-box"><input type="checkbox" class="step-check"{{if .Rung.Step.Done}} checked{{end}}{{if not (steppable .Card)}} disabled{{end}}
+      hx-post="/api/card/{{.Card.ID}}/step" hx-vals='{"ordinal": {{.Rung.Step.ID}}{{if .Rung.Step.Done}}, "op": "undo"{{end}}}'
+      hx-target="closest li" hx-swap="outerHTML"
+      title="{{if .Rung.Step.Done}}open this step again{{else}}mark this step done{{end}}"><span class="step-ordinal">{{.Rung.Step.ID}}</span> <span class="step-name">{{.Rung.Step.Name}}</span></label>
+  <button type="button" class="step-erase glyph"{{if not (steppable .Card)}} disabled{{end}} aria-label="erase step {{.Rung.Step.ID}}"
+      hx-post="/api/card/{{.Card.ID}}/step" hx-vals='{"ordinal": {{.Rung.Step.ID}}, "op": "erase"}'
+      hx-target="#card-steps" hx-swap="outerHTML"
+      hx-confirm="Erase step {{.Rung.Step.ID}}? Its name is gone and its ordinal stays spent."
+      title="erase this step - its name is gone and its ordinal stays spent"><svg class="i" aria-hidden="true"><use href="#icon-trash"/></svg></button>
+  {{- end}}
+</li>
+{{end}}
+{{range .Rungs}}{{template "card.step.rung" .}}{{end}}

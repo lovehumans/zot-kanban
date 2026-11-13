@@ -23,9 +23,9 @@ import (
 
 // filterCards is the board's answer to a query: the Cards every word of it reaches. Words are asked of the
 // Card, not of one field of it, so they may land anywhere on it - the title, the id, the body, a Comment an
-// Agent filed - and a Card carrying all of them is kept. A word is a substring, and case is not a
-// distinction. A query of nothing keeps everything: the filter is what a request asks for, never something
-// the board carries.
+// Agent filed, the name of one of its steps - and a Card carrying all of them is kept. A word is a substring,
+// and case is not a distinction. A query of nothing keeps everything: the filter is what a request asks for,
+// never something the board carries.
 func filterCards(cards []Card, query string) []Card {
 	words := strings.Fields(strings.ToLower(query))
 	if len(words) == 0 {
@@ -46,6 +46,11 @@ func cardReaches(c Card, words []string) bool {
 	found := []string{c.ID, c.Title, c.Body}
 	for _, cm := range c.Comments {
 		found = append(found, cm.Text)
+	}
+	// A step's name joins the reach, so a query finds the Card a step belongs to rather than the step: a Step is
+	// not a Card and is never a hit of its own.
+	for _, s := range c.Steps {
+		found = append(found, s.Name)
 	}
 	whole := strings.ToLower(strings.Join(found, "\n"))
 	for _, w := range words {

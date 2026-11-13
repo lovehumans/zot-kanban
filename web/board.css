@@ -94,6 +94,11 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
    beside it. Opening the Card takes the blue off, because opening it is reading its Comments; the read-state that
    decides it is .kanban/unseen_comments, gitignored for the same reason the new mark's is. */
 .card .new-comments { color: var(--accent); }
+/* A Comment count is a number and Tabler's bubble, the word left out: the bubble says what the word said, the
+   number says how many, and the words live in the count's title (card.fragment.html, as 0.70.0).
+   No colour rule here - the glyph paints through currentColor, so the blue the rule above lights the
+   number with lights the bubble with, and the pair is kept on one line of the meta line. */
+.card .comment-count { white-space: nowrap; }
 /* A Card an Agent is holding wears a thick edge, because the way a claim is released is a human drag and the
    edge is what tells a hand this Card is someone's to let go of. Loud orange is the hue no role spent before
    this: green says the session named on the Card, and the priority stripes are the dark red, dark green and dark
@@ -122,6 +127,85 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
    to look at. */
 .card .contradiction { color: var(--wrong); }
 .col-done .card:has(.contradiction) { opacity: 1; }
+/* A Card's steps are said on its face as x/n in the meta line, in the same quiet ink the rest of that line wears,
+   and a Card with no steps prints nothing there. The count is board.go's reading (stepCount) rather than a number a
+   template worked out. A finished Card still showing a step undone paints those numbers in the red the board already
+   uses for what does not hold up, and is not dimmed with the rest of done for the same reason a contradicting Card is
+   not: it is the one thing on that Column a human is meant to look at. An unmet step is deliberately not a
+   Contradiction - done costs the sha of a commit, and a step is no such evidence in either direction - so it borrows
+   the hue and adds no mark of its own. */
+.card .steps { color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .steps.unmet { color: var(--unmet); }
+.col-done .card:has(.steps.unmet) { opacity: 1; }
+/* Under that count the same reading laid along the face: nine-tenths of the Card's width, one rung per live step,
+   the rungs filled in ordinal order up to how far the Card got. Rungs rather than one continuous fill, because a
+   Card's steps are counted work and an erased step leaves its rung off instead of renumbering the rest; the bar is
+   the count made visible and the two always say the same thing. The track is the Card's own structural hue and a
+   filled rung the quiet ink of the count, so the bar borrows no hue of its own; on a finished Card short of a step
+   the rungs it never filled wear the unmet red, which says which rung is missing instead of only that one is. The
+   markup is aria-hidden because the count above it already says the words, and it rides into a dragged Card for
+   free because the ghost is the browser's snapshot of the element being dragged (card.fragment.html). */
+.card .progress { display: flex; gap: 3px; width: 90%; height: 4px; margin: .4rem 0 0; }
+.card .progress .seg { flex: 1 1 0; min-width: 4px; border-radius: 2px; background: var(--edge); }
+.card .progress .seg.done { background: var(--muted); }
+.card:has(.steps.unmet) .progress .seg:not(.done) { background: var(--unmet); }
+/* In the modal a Card's steps are a ladder with two controls on it: a box that carries the action its own state
+   names, and a glyph that erases the step. An open box posts the ordinal, a ticked box posts it with op=undo, and the
+   glyph posts op=erase - the same word the Agent's door and the model door use for the same thing (card.steps.html,
+   card.step.html). The ordinal is printed because it is how a session names the step it works, and how a hand reading
+   a Card an agent worked can tell which one a sentence was about; the name is part of the click target because a step
+   is marked by its name. A control drawn disabled is not the board being shy: stepsLocked in board.go is the very
+   sentence the door behind it would answer a click with, and it is printed under the ladder so the reason is read
+   rather than guessed. */
+.card .steps-head { margin: .55rem 0 0; color: var(--fg-strong); font-size: .8rem; }
+.card .steps-list { margin: .2rem 0 0; padding-left: 0; list-style: none; }
+.card .step { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem; color: var(--body); font-size: .8rem; }
+.card .step-box { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem; cursor: pointer; }
+.card .step-check { flex: none; margin: 0; width: 1.25em; height: 1.25em; accent-color: var(--accent); }
+.card .step-ordinal { color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .step-name { flex: 1 1 8ch; }
+.card .step.done .step-name { color: var(--muted); text-decoration: line-through; }
+.card .step-box:has(.step-check:disabled) { cursor: default; color: var(--muted); }
+.card .step-check:disabled { accent-color: var(--muted); }
+/* The reason a ladder is shut is a notice rather than another line of the Card's own text: it is framed in the
+   quiet blue the board uses to say something to a reader, and it wears the info glyph beside those words. Its ink
+   stays the rest ink a Card is written in, because what is being explained is meant to be read and not merely
+   noticed, and nothing in it is to click - the sentence is the door's own words, quoted rather than restated,
+   and the glyph is decoration a screen reader skips while the sentence names it (card.steps.html,
+   stepsLocked in board.go). */
+.card .steps-locked { margin: .35rem 0 0 0; padding: .3rem .5rem; border: 1px solid var(--info); border-radius: 4px;
+                      color: var(--muted); font-size: .75rem; }
+.card .steps-locked .i { color: var(--info); }
+/* A step erased keeps its ordinal off the later ones, and the Card's own view prints that gap rather than hiding it:
+   the rung stays in the ladder, says only *erased* where the name was, and carries nothing to click. It is not the
+   wrong red - erasing a step is a legal write, not a Card that does not hold up - and it is not a rung one can mark,
+   so it wears the quiet ink a done step's name already wears. Its indent is the box a live rung
+   posts its ordinal behind (1.25em of the ladder's own type) plus the gap between them, because the number is the
+   thing a hand reads down the column and a spent one belongs in the same column as the live ones. It is dimmed by
+   opacity rather than by a paler ink: the palette's paler inks are not one ink in both themes -- --empty-ink and
+   --count-ink sit below --muted in dark modiment and one of them sits above it in light modiment -- whereas opacity
+   lowers both themes by the same fraction, the way the sheet dims a finished Card (.col-done .card, .72). */
+.card .step.erased { padding-left: calc(1.25em + .35rem); color: var(--muted); opacity: .85; }
+.card .step-erased { color: var(--muted); }
+/* The glyph beside a rung erases the step: the trash glyph the Card's own delete button wears, drawn quiet until the
+   rung is read and turned the wrong red when the pointer is on it, because it is the one step write with no way back
+   from the page and the browser's own confirmation is what asks a human to mean it. A glyph drawn disabled is
+   stepsLocked said a second time. */
+.card .step-erase { flex: none; font: inherit; color: var(--muted); background: none;
+                    border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
+.card .step:hover .step-erase { color: var(--body); border-color: var(--edge); }
+.card .step-erase:hover { color: var(--wrong); border-color: var(--wrong); }
+.card .step-erase:disabled { color: var(--edge); cursor: default; }
+.card .step-erase:disabled:hover { color: var(--edge); border-color: transparent; }
+/* The field at the foot of the ladder files a step by name, and it is the only way a step's name is ever written: a
+   filed step is born open and its name is never reworded. It wears the edit form's field, because it is
+   the same kind of thing. A Card holding every live step is drawn shut at both its controls, and both carry the words
+   saying what it is out of room on - the name limit, or seven steps (stepsFull, stepFieldHint). The field is one of
+   the modal's watched fields: closing the view with words in it asks first, the way it asks for the title, the body
+   and a Comment (web/board.js). */
+.card .step-file input:disabled { color: var(--muted); background: var(--hover-ground); border-color: var(--edge); }
+.card .step-file .modal-save:disabled { color: var(--muted); background: var(--hover-ground); border-color: var(--edge); }
+.card .step-file .modal-save:disabled:hover { background: var(--hover-ground); border-color: var(--edge); }
 .card .comments { margin: .45rem 0 0; padding-left: .6rem; border-left: 2px solid var(--edge); }
 .card .comment { margin: 0 0 .4rem; }
 .card .comment:last-child { margin-bottom: 0; }

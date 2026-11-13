@@ -149,6 +149,10 @@ func NewServer(root, installDir string) (*Server, error) {
 		// foldable is the Comments region's own measure: which Comment runs past the lines the modal shows, and
 		// is therefore the one a hand clicks open. How much of it is shown is the sheet's, not this call's.
 		"foldable": foldable,
+		// commentCountTitle is the words a Comment count keeps when the face prints a number beside a bubble instead
+		// of a word: the title a hover reads, and a reading of the Card board.go builds rather than a sentence a
+		// template works out ( as 0.70.0).
+		"commentCountTitle": commentCountTitle,
 		// movable and ruleFor are the Column gate's answers, quoted rather than restated: the Board
 		// says which Card a hand may lift out of its Column - the fact card.fragment.html asks three times about
 		// one Card, for the drag, the Claim's edge and the holder's name - and what a Column nothing lands in
@@ -161,6 +165,24 @@ func NewServer(root, installDir string) (*Server, error) {
 		// The sheet takes it as which side of the Card the Priority stripe wears, so the mark
 		// comes from the field and never from words a Card file happens to carry.
 		"agentOrigin": agentOrigin,
+		// stepCount, orderedSteps, unmetSteps, steppable, stepsLocked, ladderOf and stepsFull are the page's access to
+		// a Card's steps: the x/n a face prints, the order a modal lists them in, the steps a finished Card still shows
+		// undone, which of them a hand may put a live control on with the sentence that says why not, the ladder a Card's
+		// own view draws with its spent rungs in it, and whether the Card is already full of live steps. All seven are
+		// readings of the Card rather than fields of its file, so the page quotes board.go for them the way it quotes
+		// movable and agentOrigin instead of working them out in a template.
+		"stepCount":    stepCount,
+		"orderedSteps": orderedSteps,
+		"unmetSteps":   unmetSteps,
+		"steppable":    steppable,
+		"stepsLocked":  stepsLocked,
+		"ladderOf":     ladderOf,
+		"stepsFull":    stepsFull,
+		// stepNameLimit and stepFieldHint are the filing field's own limit and its tooltip, both read from the numbers
+		// the step door counts: the field refuses a name longer than the door would file, and its tooltip says which of
+		// the two rooms a full Card is out of. The door counts runes; the field counts what a browser counts.
+		"stepNameLimit": func() int { return stepNameLimit },
+		"stepFieldHint": stepFieldHint,
 		// agentRules is the help modal's way of quoting the board's rules instead of restating them:
 		// they have one published home in the tool description, and a page that printed its own wording of them
 		// would be a second copy that can drift from what an Agent was handed. The words are the same const, verbatim.
@@ -190,6 +212,10 @@ func NewServer(root, installDir string) (*Server, error) {
 	s.mux.HandleFunc("POST /api/card/{id}/comment", s.handleCardComment)
 	s.mux.HandleFunc("POST /api/card/{id}/seen", s.handleCardSeen)
 	s.mux.HandleFunc("GET /api/card/{id}/comments", s.handleCardComments)
+	// A step is written through its own route rather than as a field on the edit form: it is one ordinal and the
+	// action its box's own state names, and a control that ticks one step does not travel with the title, body and
+	// priority a save submits.
+	s.mux.HandleFunc("POST /api/card/{id}/step", s.handleCardStep)
 	s.mux.HandleFunc("DELETE /api/card/{id}", s.handleCardDelete)
 	// Closing and reopening are their own routes rather than a field on the edit form or a shape of a move:
 	// they are the two Card actions a browser may take that no Agent action and no drag is, and a door only a
@@ -521,14 +547,9 @@ func (s *Server) writeColumns(w http.ResponseWriter, r *http.Request, columns []
 // response of one Card fragment carries no shell and no stylesheet, so it is never a page.
 func (s *Server) handleCardDetail(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	col, _, raw, err := s.board.cardFile(id)
+	card, err := s.readCardFor(id)
 	if err != nil {
 		reject(w, refusalStatus(err), err)
-		return
-	}
-	card, err := readCard(raw, col, id, time.Now())
-	if err != nil {
-		reject(w, http.StatusInternalServerError, err)
 		return
 	}
 	// A Card shown whole is asked the board's done question too, so the modal cannot show a Card filed done
@@ -579,17 +600,111 @@ func (s *Server) handleCardComment(w http.ResponseWriter, r *http.Request) {
 // and leave the edit form, and whatever the human has typed in it, alone.
 func (s *Server) handleCardComments(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	col, _, raw, err := s.board.cardFile(id)
+	card, err := s.readCardFor(id)
 	if err != nil {
 		reject(w, refusalStatus(err), err)
 		return
 	}
-	card, err := readCard(raw, col, id, time.Now())
+	s.write(w, "card.comments.html", card)
+}
+
+// readCardFor is what every door that renders a Card needs before it renders it: the lookup of the file holding
+// the id, the parse into a Card read out of the Column it sits in, and nothing else - the refusal it fails at
+// keeps its kind, so a door answers 404 for an id no Card holds and 500 for a file that stopped being a Card, and
+// the whole Card view adds its own done question on top of this.
+func (s *Server) readCardFor(id string) (Card, error) {
+	col, _, raw, err := s.board.cardFile(id)
 	if err != nil {
-		reject(w, http.StatusInternalServerError, err)
+		return Card{}, err
+	}
+	return readCard(raw, col, id, time.Now())
+}
+
+// handleCardStep is the Card modal's half of the step door: it files the step the field names, marks the rung a box
+// sits on done, opens one that was marked with op=undo, and erases the step a rung's glyph asks for. It is the
+// hand's half of Board.Step, so the refusals that reach this route are the ones a hand is given: no step verb at all
+// on a Card in closed, and none on a Card a session is holding in doing - which is the control's own disabled state
+// said a second time.
+//
+// It answers the smallest thing the write changed, and it fires no kanban:saved: working a step does not finish with
+// the Card, which is the same reason a filed Comment leaves the modal open, and the count and the bar behind the
+// dialog are the next poll's to redraw. A mark, an opening, or a control stale about a step
+// already in the state it asked for answers with the one rung it moved, which is what an empty rung costs and leaves
+// the words a human is typing into the filing field where they were; a filing, an erase, or a name the Card already
+// files changed the ladder's shape and answers the whole region, carrying the count, whether each control is live,
+// the words a locked Card paints instead of controls, the error slot a refusal fills, and the field itself.
+func (s *Server) handleCardStep(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	ask, err := requestedStep(r)
+	if err != nil {
+		reject(w, http.StatusBadRequest, err)
 		return
 	}
-	s.write(w, "card.comments.html", card)
+	// The Card is read before it is written into, as every door that renders one reads it: a file that stopped
+	// being a Card is named before a step is added to it rather than after.
+	if _, err := s.readCardFor(id); err != nil {
+		reject(w, refusalStatus(err), err)
+		return
+	}
+	touched, err := s.board.Step(StepRequest{Card: id, Text: ask.Text, Ordinal: ask.Ordinal, Op: ask.Op}, time.Now())
+	if err != nil {
+		reject(w, refusalStatus(err), err)
+		return
+	}
+	if answersLadder(touched.Did) {
+		s.write(w, "card.steps.html", ladderOf(touched.Card))
+		return
+	}
+	s.write(w, "card.step.html", rungOf(touched.Card, touched.Step))
+}
+
+// ladderView is what a Card's step fragments are drawn from: the Card the ladder belongs to, and the rungs this one
+// answer paints.
+type ladderView struct {
+	Card  Card
+	Rungs []rungView
+}
+
+// rungView is one rung drawn on one Card: the rung's control posts to that Card's step door and asks whether that
+// Card is worked at, so the Card travels with each rung beside it rather than only above the ladder.
+type rungView struct {
+	Card Card
+	Rung stepRung
+}
+
+// ladderOf is a Card's whole ladder as the page draws it, spent rungs included.
+func ladderOf(c Card) ladderView {
+	spent := cardLadder(c)
+	rungs := make([]rungView, 0, len(spent))
+	for _, r := range spent {
+		rungs = append(rungs, rungView{Card: c, Rung: r})
+	}
+	return ladderView{Card: c, Rungs: rungs}
+}
+
+// rungOf is the one rung a step write moved, drawn as the Card would draw it.
+func rungOf(c Card, s Step) ladderView {
+	return ladderView{Card: c, Rungs: []rungView{{Card: c, Rung: stepRung{Step: s}}}}
+}
+
+// answersLadder is which step writes answer the Card's whole ladder and which answers one rung of it. A filing, an
+// erase, or a name the Card already files changed the ladder's shape; a mark, an opening, or a control that asked
+// for a state the step already held moved one rung.
+func answersLadder(did string) bool {
+	switch did {
+	case stepFiled, stepErased, stepAlreadyFile:
+		return true
+	}
+	return false
+}
+
+// stepFieldHint is the tooltip a Card's filing field carries: what this Card is out of room on. A Card holding every
+// live step is out of room for a name as much as for another rung, so both readings name the same limit.
+func stepFieldHint(c Card) string {
+	if stepsFull(c) {
+		return fmt.Sprintf("%d steps max.", maxLiveSteps)
+	}
+	return fmt.Sprintf("a step names one small task, at most %d characters.", stepNameLimit)
 }
 
 // handleCardDelete takes a Card off the board: its file moves into .kanban/trash/ and the board stops
@@ -707,6 +822,62 @@ func commentRequest(text string, wants int) (string, int, error) {
 		return "", 0, fmt.Errorf("comment_id %d: want a whole number 0 or above", wants)
 	}
 	return text, wants, nil
+}
+
+// requestedStep reads what one of the modal's step controls arrives with: the ordinal of the step the rung was drawn
+// on, the op that control's own state names - absent when the box was open and the click means "mark this one done",
+// undo when it was ticked and the click means "open this one again", erase when the rung's glyph was pressed - and
+// the name the filing field holds. A form body is what htmx sends and JSON is what curl writes, like every other
+// Card write here, and a body that could never be a step is answered at the door rather than passed down to be
+// refused as something else.
+func requestedStep(r *http.Request) (stepAsk, error) {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		var in struct {
+			Ordinal int    `json:"ordinal"`
+			Op      string `json:"op"`
+			Text    string `json:"text"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			return stepAsk{}, fmt.Errorf(`body is not a JSON object with "ordinal", "text" and an optional "op": %w`, err)
+		}
+		return stepControlRequest(in.Ordinal, in.Op, in.Text)
+	}
+	if err := r.ParseForm(); err != nil {
+		return stepAsk{}, fmt.Errorf("body is not a form or a JSON object: %w", err)
+	}
+	ordinal := 0
+	if raw := strings.TrimSpace(r.PostForm.Get("ordinal")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil {
+			return stepAsk{}, fmt.Errorf("ordinal %q: want a whole number", raw)
+		}
+		ordinal = n
+	}
+	return stepControlRequest(ordinal, strings.TrimSpace(r.PostForm.Get("op")), r.PostForm.Get("text"))
+}
+
+// stepAsk is the reading both bodies share: which rung, which op, and what name to file.
+type stepAsk struct {
+	Ordinal int
+	Op      string
+	Text    string
+}
+
+// stepControlRequest is the reading both bodies share. The ops the page draws controls for are the page's facts to
+// name, and a filing field carries no op at all; an ordinal is needed only when no name is named. Everything about
+// the step itself - a name too long, a name on a rung an ordinal names, an ordinal this Card does not hold - is
+// refused by the model door in the words it uses at every door.
+func stepControlRequest(ordinal int, op, text string) (stepAsk, error) {
+	switch op {
+	case "", stepUndo, stepErase:
+	default:
+		return stepAsk{}, fmt.Errorf(`step op %q: this door marks a step done, opens it with %q, or erases it with %q`, op, stepUndo, stepErase)
+	}
+	text = strings.TrimSpace(text)
+	if text == "" && ordinal <= 0 {
+		return stepAsk{}, fmt.Errorf(`a step control names "ordinal", the ordinal of the step on this Card, or "text" for the step to file`)
+	}
+	return stepAsk{Ordinal: ordinal, Op: op, Text: text}, nil
 }
 
 // reject answers a failed board write in plain text, because a refusal the browser would swap into a

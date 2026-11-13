@@ -92,11 +92,15 @@
   --gb-lm-light-orange: #af3a03;
   --gb-lm-light-gray: #7c6f64;
 
-  /* The roles the rest of this sheet is written in, and the hue each one keeps: red is what is wrong, orange is a
-     Card someone is holding, green is the session named on it, aqua is what a Card names or a write does, blue is
-     the interface's own - an id, focus, a column accepting a drop, the asterisk on a Card nobody has opened yet and
-     the comment count nobody has read - grey is what a Card is at rest, a low stripe, an empty Column, a Column's
-     count - and purple is the backlog's. A light theme is a second set of these, not a second sheet. */
+  /* The roles the rest of this sheet is written in, and the hue each one keeps: red is what is wrong, and the red of
+     a step a finished Card still shows undone is the same red - an unmet step is painted, not refused, so it borrows
+     the hue rather than adding a role of its own; orange is a Card someone is holding, green is the session named on
+     it, aqua is what a Card names or a write does, blue is the interface's own - an id, focus, a column accepting a
+     drop, the asterisk on a Card nobody has opened yet and the comment count nobody has read - grey is what a Card is
+     at rest, a low stripe, an empty Column, a Column's count - and purple is the backlog's. The two blues are one
+     family and two roles: the loud blue is the interface a hand acts on, and the quiet blue is what the board says to
+     a reader where nothing is to click. A light theme is a second
+     set of these, not a second sheet. */
   --fg: var(--gb-dm-fg1);
   --fg-strong: var(--gb-dm-fg0);
   --body: var(--gb-dm-fg2);
@@ -112,6 +116,8 @@
   --holder: var(--gb-dm-light-green);
   --wrong: var(--gb-dm-light-red);
   --wrong-edge: var(--gb-dm-dark-red);
+  --unmet: var(--gb-dm-light-red);
+  --info: var(--gb-dm-dark-blue);
   /* Eight of these are what a rule used to write twice - a rule plus a `:root[data-theme="light"]` counterpart -
      and the role is what replaces the counterpart. bg0-soft is the ground a control wears while the hand is on it: a
      Column a drag is aimed at, a save button hovered. high's segment ink is chosen per theme rather than per control.
@@ -121,7 +127,9 @@
      Priority hues are quieter than that: dark red, dark green and dark grey are byte-for-byte the same colours in
      both halves of the palette (its 22,23,29 against its 61,62,68), so binding them here paints exactly what
      the rules painted before. They are bound for a different reader: the sheet that dresses the board names
-     `--prio-high` and never a Gruvbox name, so a palette can be changed without rewriting a stripe. */
+     `--prio-high` and never a Gruvbox name, so a palette can be changed without rewriting a stripe.
+     The quiet blue joins them for the same reason: dark blue is byte-for-byte the same
+     colour in both halves (its 25 against its 64), and it is the one hue of the quiet half no other role wears. */
   --hover-ground: var(--gb-dm-bg0-soft);
   --prio-high: var(--gb-dm-dark-red);
   --prio-mid: var(--gb-dm-dark-green);
@@ -135,7 +143,8 @@
 /* A theme is a second binding of these roles, and it is the whole of what a theme is: the hundred rules below this
    one are written through it rather than through the palette. Two bindings are not the swap the mirror
    suggests. `--wrong` takes the light half's own red, because the loud half is the one place Gruvbox does not mirror
-   and a dark-mode loud red on a cream page is a mark that barely reads. `--wrong-edge` keeps #cc241d in both themes,
+   and a dark-mode loud red on a cream page is a mark that barely reads; `--unmet` follows it, because an unmet step
+   is painted with the same red `--wrong` is. `--wrong-edge` keeps #cc241d in both themes,
    because a quiet hue is the same bytes in both halves of the palette and the edge of a contradiction is not the
    contradiction's ink. */
 :root[data-theme="light"] {
@@ -155,6 +164,8 @@
   --holder: var(--gb-lm-light-green);
   --wrong: var(--gb-lm-light-red);
   --wrong-edge: var(--gb-lm-dark-red);
+  --unmet: var(--gb-lm-light-red);
+  --info: var(--gb-lm-dark-blue);
   --hover-ground: var(--gb-lm-bg0-soft);
   --prio-high: var(--gb-lm-dark-red);
   --prio-mid: var(--gb-lm-dark-green);

@@ -151,11 +151,17 @@
   document.addEventListener("htmx:response:error", function (e) {
     var ctx = e.detail && e.detail.ctx;
     // Every door a Card is written through, whichever slot its reason belongs in: PATCH moves or edits one,
-    // POST files a Comment or a new Card, DELETE takes one off the board (handleCardDelete in web.go).
+    // POST files a Comment or a new Card or steps on one, DELETE takes one off the board (handleCardDelete in
+    // web.go).
     if (!ctx || ["PATCH", "POST", "DELETE"].indexOf(ctx.request.method) < 0) return;
     var source = ctx.sourceElement;
     var slot = "move-error";
-    if (source && source.closest("#card-modal")) slot = "card-error";
+    // A step control is asked first, before the modal: it sits inside the modal, so the modal's slot would otherwise
+    // swallow a refusal that belongs under the rungs it failed to move. Nothing here is re-read the way a Comment
+    // form is: htmx swaps no 4xx body, so a refused filing leaves its field holding the name the human typed and the
+    // ladder exactly as the Board last answered it.
+    if (stepDoor(ctx)) slot = "steps-error";
+    else if (source && source.closest("#card-modal")) slot = "card-error";
     else if (source && source.closest("#composer")) slot = "composer-error";
     // Filing a Comment is refused while the human is looking at the Comments region, so its reason belongs
     // under the form that filed it, not beside the edit form above.
@@ -188,6 +194,12 @@
 
   function endsWith(haystack, needle) {
     return typeof haystack === "string" && haystack.slice(-needle.length) === needle;
+  }
+
+  // Whether a request went through one of a Card's step doors - a box, an erase glyph, or the filing field - said the
+  // same way for a refusal and for a write the server accepted. Each of them posts to .../step itself.
+  function stepDoor(ctx) {
+    return !!(ctx && ctx.sourceElement && endsWith(ctx.sourceElement.getAttribute("hx-post"), "/step"));
   }
 
   // The ordinal a Comment form carries came from the read that rendered it. If another hand filed a Comment
@@ -307,6 +319,13 @@
     // Whatever this swap put down inside the Card view is what the view was filled with, which is what the
     // unsaved-words guard compares against.
     rebaseModal();
+    // A step write the server accepted has nothing left to say. Its refusal was routed into #steps-error above; the
+    // answer that repaints the whole ladder recreates that slot empty by itself, and the answer that repaints one
+    // rung leaves the region standing, so a refusal from before the rung that worked is emptied here.
+    if (stepDoor(e.detail && e.detail.ctx)) {
+      var said = document.getElementById("steps-error");
+      if (said) said.textContent = "";
+    }
   });
 
   function markSeen() {
@@ -324,7 +343,7 @@
   var filled = {};
 
   function watchedFields(view) {
-    return Array.prototype.slice.call(view.querySelectorAll("#card-title, textarea#card-body, textarea#card-comment"));
+    return Array.prototype.slice.call(view.querySelectorAll("#card-title, textarea#card-body, textarea#card-comment, #card-step"));
   }
 
   // What each watched field was filled with, remembered by the node a swap put there. Node identity is what tells
