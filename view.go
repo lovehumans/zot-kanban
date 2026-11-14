@@ -61,6 +61,17 @@ func cardReaches(c Card, words []string) bool {
 	return true
 }
 
+// shortSHA is a commit name as the Card view prints it: the shortest name the model accepts, with the rest of it
+// kept where a hover reads it. It is a print of commitCopy, so the characters on the line and the characters a
+// paste gets are the same name, shortened only on the screen. A name the shape gate refuses is printed whole,
+// because a name the board is calling a contradiction is evidence a human reads rather than abbreviates.
+func shortSHA(name string) string {
+	if !commitShaped(name) {
+		return name
+	}
+	return name[:shaMinDigits] + "…"
+}
+
 // pageView is the view a request asked the page to show: the filter's words, and whether the Column of closed
 // Cards is drawn beside the six. Both arrive the same way - ?q= and ?closed=1 on a GET, a q field and a closed
 // field in the body of a write - because web/board.js sends the page's view with every request the page makes:

@@ -240,38 +240,40 @@
     }, function () {});
   }
 
-  // Copying a Card's identifier out of the modal. The string the modal prints is the stem of the Card's
-  // file, which is what GET and PATCH /api/card/<id> answer to and what the agent tool names a Card with,
-  // so pasting it beats retyping a slug built from its title and the minute it was filed. 127.0.0.1 is a
-  // secure context, so navigator.clipboard is available; a browser that still refuses the write gets the
-  // id selected instead of nothing, and the note says which of the two happened.
+  // Copying a Card's identifier or its commit name out of the modal. The string a control prints is the string its
+  // data-copy carries, so what is read and what a paste gets are one string - a commit is the one exception: it is
+  // printed short and copied whole, with the whole name in the control's tooltip. Each control answers beside
+  // itself, in the .copy-note sitting after it, and a browser that refuses the write gets that control's own text
+  // selected instead of nothing. 127.0.0.1 is a secure context, so navigator.clipboard is available.
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-copy]");
     if (!btn) return;
-    var id = btn.dataset.copy;
-    function say(text) {
-      var note = document.getElementById("copy-note");
-      if (note) note.textContent = text;
+    var text = btn.dataset.copy;
+    function say(phrase) {
+      var note = btn.nextElementSibling;
+      if (!note || !note.classList.contains("copy-note")) {
+        note = document.getElementById("copy-note");
+      }
+      if (note) note.textContent = phrase;
     }
-    function selectID() {
-      var printed = document.getElementById("card-id");
-      if (!printed || !window.getSelection) return;
+    function selectText() {
+      if (!window.getSelection) return;
       var range = document.createRange();
-      range.selectNodeContents(printed);
+      range.selectNodeContents(btn);
       var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(range);
     }
     if (!navigator.clipboard) {
-      selectID();
-      say("no clipboard in this browser - the id is selected instead");
+      selectText();
+      say("no clipboard in this browser - the text is selected instead");
       return;
     }
-    navigator.clipboard.writeText(id).then(function () {
+    navigator.clipboard.writeText(text).then(function () {
       say("copied");
     }, function () {
-      selectID();
-      say("the clipboard was refused - the id is selected instead");
+      selectText();
+      say("the clipboard was refused - the text is selected instead");
     });
   });
 
@@ -319,6 +321,12 @@
     // Whatever this swap put down inside the Card view is what the view was filled with, which is what the
     // unsaved-words guard compares against.
     rebaseModal();
+    // And a write made through this view answers with the stamp the Card's file holds after it, which the view has
+    // to keep as its own: the band below is about what somebody else changed.
+    rebaseStamp(ctx);
+    // The poll is what notices this Card moving under the view: #board has just arrived carrying each Card's stamp,
+    // while the view still holds the stamp of the render that filled it.
+    if (ctx && ctx.target && ctx.target.id === "board") sayStale();
     // A step write the server accepted has nothing left to say. Its refusal was routed into #steps-error above; the
     // answer that repaints the whole ladder recreates that slot empty by itself, and the answer that repaints one
     // rung leaves the region standing, so a refusal from before the rung that worked is emptied here.
@@ -329,10 +337,16 @@
   });
 
   function markSeen() {
-    var printed = document.getElementById("card-id");
-    var id = printed ? (printed.textContent || "").trim() : "";
+    var id = modalID();
     if (!id) return;
     htmx.ajax("POST", "/api/card/" + encodeURIComponent(id) + "/seen", {target: "body", swap: "none"});
+  }
+
+  // The id the modal prints is the id every door takes, the id the polled face is keyed by, and the only thing that
+  // says which Card this view belongs to once its own node has been swapped out from under it.
+  function modalID() {
+    var printed = document.getElementById("card-id");
+    return printed ? (printed.textContent || "").trim() : "";
   }
 
   // Closing a Card view with words still in it. Esc and a click beside the modal both run the dialog's cancel
@@ -367,6 +381,41 @@
       var held = filled[field.id];
       return held && held.words !== field.value;
     });
+  }
+
+  // A Card open in the modal is a Card whose file can move under it, and this view is the one region the 3 s poll
+  // does not redraw: a swap here would discard the words a human is typing into it. Two stamps and one
+  // comparison is the whole of it, and the same shape is what notices a version bump. The polled face
+  // wears the stamp the Card's file holds now (web/card.fragment.html), the view wears the stamp of the render
+  // that filled it (web/card.detail.html), and the two differ exactly when somebody has changed this Card since
+  // it was opened. The view then says so in its own
+  // slot, because the strip beside the board sits behind the dialog, and re-says it on every poll while they differ,
+  // so it is a band that stays rather than one that blinks. It offers words and one action - close and reopen - and
+  // never touches the view itself.
+  var CARD_STAMP = "Kanban-Card-Updated";
+  var CARD_CHANGED = "this Card has changed on the board since this view was opened - close it and open it again " +
+    "to read the new words; nothing in this view is redrawn under you";
+
+  function rebaseStamp(ctx) {
+    var view = modalOf();
+    var head = view ? view.querySelector(".card.detail") : null;
+    // Only a write answers with the Card's fresh stamp; a read that re-renders one region leaves the rest of the
+    // view as old as it was, and the band stays saying the whole view is worth reopening.
+    var fresh = ctx && ctx.response && ctx.response.headers ? ctx.response.headers.get(CARD_STAMP) : null;
+    if (head && fresh) head.dataset.updated = fresh;
+  }
+
+  function sayStale() {
+    var view = modalOf();
+    var head = view ? view.querySelector(".card.detail") : null;
+    var band = document.getElementById("card-stale");
+    if (!head || !band) return;
+    var id = modalID();
+    var face = id ? document.querySelector('#board [data-card="' + id + '"]') : null;
+    var now = face ? face.dataset.updated : "";
+    // A Card the poll no longer drew - moved into a Column this page is not showing, or taken off the board - is one
+    // this band cannot compare, and the write aimed at it says what happened in the board's own words.
+    band.textContent = now && now !== head.dataset.updated ? CARD_CHANGED : "";
   }
 
   var modal = modalOf();

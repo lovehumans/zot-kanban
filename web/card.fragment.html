@@ -9,7 +9,7 @@
     A Card in done is no one's to let go of - it is not draggable and its claim only says who did the work - so
     it wears neither the edge nor the name here. A Card in closed is the same case for the same reason, and a
     stronger one: the only way out of that Column is reopening, so a drag would be a Move the Board refuses.
-    movable in board.go says which Cards those two are, once for the edge, the drag and the name,
+    movable in gate.go says which Cards those two are, once for the edge, the drag and the name,
     because it is the same fact the Board's Column gate refuses a move out of those Columns with.
     What is not here lives in that modal, which a click swaps in.
     The same element is the drag source and the click target, which is why web/board.js turns draggable off
@@ -27,8 +27,8 @@
     The count is a number and Tabler's plain bubble, not a number and a word: the bubble says what the
     word said and the number says how many, so the word is chrome, and its words live on in two places: in the
     count's title - "9 Comments on this Card", or the sentence naming an unread Agent Comment when the count is lit
-    - and in the bubble's own `aria-label`, so a reader who never hovers still hears what the number counts
-    (as 0.70.0). The step count beside it has been wordless the same way, with the same
+    - and in the bubble's own `aria-label`, so a reader who never hovers still hears what the number counts.
+    The step count beside it has been wordless the same way, with the same
     arrangement.
     Which door captured a Card is shown by the one mark a face has room for without adding a word: an Agent's Card
     wears its Priority stripe on the right edge and a human's on the left. The stripe is the same three
@@ -37,7 +37,7 @@
     held Card already says whose it is through the thick orange edge and keeps its stripe on the left inside that
     edge.
     A Card that has steps prints how far through them it is as x/n at the end of the same meta line, and a Card with
-    no steps prints nothing: the count is stepCount in board.go, a reading of the Card rather than a field of its
+    no steps prints nothing: the count is stepCount in card.go, a reading of the Card rather than a field of its
     file, the same way movable and agentOrigin are quoted rather than worked out here. A step is not a
     Card and gets no mark of its own, no hue for the door that wrote it and no place on the board outside the Card it
     belongs to; a Card an agent filed steps on is not a Card a human has to reopen to see them, because the count is
@@ -51,8 +51,11 @@
     one is. It carries no words and is aria-hidden: the count above already says them, and a second copy in the page's
     reading order would only repeat the fact. A dragged Card carries the bar, because the browser paints the element it
     is dragging and where a Card has got to is worth seeing while it is being put down.
+    The face carries the Card's `updated` as the file holds it, in `data-updated`, beside the humanised phrase the meta
+    line prints: the 3 s poll redraws this face, and web/board.js compares that stamp with the one the Card's own view
+    was filled with. When they differ the view says the Card moved under it, rather than being swapped under the human.
 */}}
-<article class="card p-{{.Priority}}{{if and .Claim (movable .)}} claimed{{end}}{{if agentOrigin .}} by-agent{{end}}" data-card="{{.ID}}"{{if movable .}} draggable="true"{{end}}
+<article class="card p-{{.Priority}}{{if and .Claim (movable .)}} claimed{{end}}{{if agentOrigin .}} by-agent{{end}}" data-card="{{.ID}}" data-updated="{{stamp .Updated}}"{{if movable .}} draggable="true"{{end}}
          hx-get="/api/card/{{.ID}}" hx-target="#card-modal" hx-swap="innerHTML"
          hx-on::after:swap="ctx.target.showModal()">
   <p class="title">{{if .Unseen}}<span class="new-mark" title="filed by an agent, and not opened since">*</span> {{end}}{{.Title}}</p>

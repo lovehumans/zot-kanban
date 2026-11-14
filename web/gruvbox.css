@@ -94,12 +94,14 @@
 
   /* The roles the rest of this sheet is written in, and the hue each one keeps: red is what is wrong, and the red of
      a step a finished Card still shows undone is the same red - an unmet step is painted, not refused, so it borrows
-     the hue rather than adding a role of its own; orange is a Card someone is holding, green is the session named on
-     it, aqua is what a Card names or a write does, blue is the interface's own - an id, focus, a column accepting a
-     drop, the asterisk on a Card nobody has opened yet and the comment count nobody has read - grey is what a Card is
-     at rest, a low stripe, an empty Column, a Column's count - and purple is the backlog's. The two blues are one
-     family and two roles: the loud blue is the interface a hand acts on, and the quiet blue is what the board says to
-     a reader where nothing is to click. A light theme is a second
+     the hue rather than adding a role of its own; orange is a Card someone is holding - and the words that say why
+     a held Card's ladder is shut are framed in that same orange, because they name that same fact - green is the
+     session named on it, aqua is what a Card names or a write does, blue is the interface's own - an id, focus, a
+     column accepting a drop, the asterisk on a Card nobody has opened yet and the comment count nobody has read -
+     grey is what a Card is at rest, a low stripe, an empty Column, a Column's count and a Column's heading.
+     The two blues are one family and two roles: the loud blue is the interface a hand acts on, and the quiet blue is
+     what the board says to a reader where nothing is to click, which is what a Card view wears when its Card moved
+     under it. A light theme is a second
      set of these, not a second sheet. */
   --fg: var(--gb-dm-fg1);
   --fg-strong: var(--gb-dm-fg0);
@@ -118,15 +120,16 @@
   --wrong-edge: var(--gb-dm-dark-red);
   --unmet: var(--gb-dm-light-red);
   --info: var(--gb-dm-dark-blue);
-  /* Eight of these are what a rule used to write twice - a rule plus a `:root[data-theme="light"]` counterpart -
-     and the role is what replaces the counterpart. bg0-soft is the ground a control wears while the hand is on it: a
-     Column a drag is aimed at, a save button hovered. high's segment ink is chosen per theme rather than per control.
-     An empty Column's ink and the count beside a heading are bg4 and bg3 on a dark ground and fg4 and
-     fg3 on a light one, which is the same bytes reached from the other side of the mirror, and the backlog's purple
-     is the one of the three that crosses into the loud half, where the halves do differ. The three
-     Priority hues are quieter than that: dark red, dark green and dark grey are byte-for-byte the same colours in
-     both halves of the palette (its 22,23,29 against its 61,62,68), so binding them here paints exactly what
-     the rules painted before. They are bound for a different reader: the sheet that dresses the board names
+  /* Each role below is bound in both `:root` blocks, and a role is what replaces what a rule used to write twice -
+     the rule plus its `:root[data-theme="light"]` counterpart. bg0-soft is the ground a control wears while the hand
+     is on it: a Column a drag is aimed at, a save button hovered. high's segment ink is chosen per theme rather
+     than per control. An empty Column's ink and the count beside a heading are bg4 and bg3 on a dark ground and fg4 and
+     fg3 on a light one, which is the same bytes reached from the other side of the mirror. A Column's heading
+     wears no role of its own: the Columns are told apart by the border and the ground each is drawn on, so every
+     heading wears `--muted` (the human's ask, 0.74.0). The three Priority hues are quieter than that: dark red,
+     dark green and dark grey are byte-for-byte the same colours in both halves of the palette (its 22,23,29
+     against its 61,62,68), so binding them here paints exactly what the rules painted before.
+     They are bound for a different reader: the sheet that dresses the board names
      `--prio-high` and never a Gruvbox name, so a palette can be changed without rewriting a stripe.
      The quiet blue joins them for the same reason: dark blue is byte-for-byte the same
      colour in both halves (its 25 against its 64), and it is the one hue of the quiet half no other role wears. */
@@ -137,7 +140,6 @@
   --prio-high-ink: var(--gb-dm-fg0);
   --empty-ink: var(--gb-dm-bg4);
   --count-ink: var(--gb-dm-bg3);
-  --backlog-ink: var(--gb-dm-light-purple);
 }
 
 /* A theme is a second binding of these roles, and it is the whole of what a theme is: the hundred rules below this
@@ -173,5 +175,4 @@
   --prio-high-ink: var(--gb-lm-bg0-hard);
   --empty-ink: var(--gb-lm-fg4);
   --count-ink: var(--gb-lm-fg3);
-  --backlog-ink: var(--gb-lm-light-purple);
 }

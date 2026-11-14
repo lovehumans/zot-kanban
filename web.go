@@ -142,6 +142,17 @@ func NewServer(root, installDir string) (*Server, error) {
 		// gives, so the composer's pre-selected choice is the model's own default rather than a string
 		// a template invented.
 		"defaultPriority": func() string { return priorityMi },
+		// stamp is a time said the way a machine reads it - UTC to the second - rather than the humanised phrase
+		// `since` prints over it. It is the stamp `since` already keeps behind those words in a <time>, said here
+		// where a Card's face and a Card's view can carry it beside the words, so web/board.js can tell a Card that
+		// moved under an open view from one that did not.
+		"stamp": stamp,
+		// shortSHA is the Card view's way of naming a done Card's commit without spending a line of the meta row on
+		// forty hexadecimal digits: the print is the shortest name the model accepts, and the control beside it hands
+		// the whole name to the clipboard. commitCopy is what that print is a print of, and what the click writes -
+		// the oid the repository answered, so a Card filed with seven digits copies forty like one filed with forty.
+		"shortSHA":   shortSHA,
+		"commitCopy": commitCopy,
 		// nextCommentID is the ordinal the next Comment on this Card will take, the same number the model
 		// layer assigns. The form carries it, so a Comment that arrives twice is recognised as the one it
 		// already is instead of being filed a second time.
@@ -150,8 +161,8 @@ func NewServer(root, installDir string) (*Server, error) {
 		// is therefore the one a hand clicks open. How much of it is shown is the sheet's, not this call's.
 		"foldable": foldable,
 		// commentCountTitle is the words a Comment count keeps when the face prints a number beside a bubble instead
-		// of a word: the title a hover reads, and a reading of the Card board.go builds rather than a sentence a
-		// template works out ( as 0.70.0).
+		// of a word: the title a hover reads, and a reading of the Card card.go builds rather than a sentence a
+		// template works out.
 		"commentCountTitle": commentCountTitle,
 		// movable and ruleFor are the Column gate's answers, quoted rather than restated: the Board
 		// says which Card a hand may lift out of its Column - the fact card.fragment.html asks three times about
@@ -169,8 +180,8 @@ func NewServer(root, installDir string) (*Server, error) {
 		// a Card's steps: the x/n a face prints, the order a modal lists them in, the steps a finished Card still shows
 		// undone, which of them a hand may put a live control on with the sentence that says why not, the ladder a Card's
 		// own view draws with its spent rungs in it, and whether the Card is already full of live steps. All seven are
-		// readings of the Card rather than fields of its file, so the page quotes board.go for them the way it quotes
-		// movable and agentOrigin instead of working them out in a template.
+		// readings of the Card rather than fields of its file, so the page quotes card.go for them the way it quotes
+		// movable in gate.go instead of working them out in a template.
 		"stepCount":    stepCount,
 		"orderedSteps": orderedSteps,
 		"unmetSteps":   unmetSteps,
@@ -573,6 +584,18 @@ func (s *Server) handleCardSeen(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// cardStampHeader names the Card's own stamp on the way out of a door that writes part of an open Card view.
+// web/board.js reads it back off the response and puts it on the view, which is what keeps the band
+// says - "this Card changed while you were reading it" - from calling the human's own Comment somebody else's.
+// The doors that only read a Card answer no such header: a read leaves the view as stale as it was.
+const cardStampHeader = "Kanban-Card-Updated"
+
+// cardStamp says the stamp this Card's file holds now. Every door that writes a fragment of a Card view carries
+// it, because that write moved the Card under the view and the view has to know it was its own hand.
+func cardStamp(w http.ResponseWriter, c Card) {
+	w.Header().Set(cardStampHeader, stamp(c.Updated))
+}
+
 // handleCardComment files one Comment on a Card through the door a human uses: the modal's own form, where
 // the author is the human and the timestamp is the server's. It answers the Card's Comments region - the
 // filed Comments and an empty form carrying the next ordinal - because the region the human posted from is
@@ -592,6 +615,7 @@ func (s *Server) handleCardComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("HX-Trigger", "kanban:commented")
+	cardStamp(w, filed.Card)
 	s.write(w, "card.comments.html", filed.Card)
 }
 
@@ -651,6 +675,7 @@ func (s *Server) handleCardStep(w http.ResponseWriter, r *http.Request) {
 		reject(w, refusalStatus(err), err)
 		return
 	}
+	cardStamp(w, touched.Card)
 	if answersLadder(touched.Did) {
 		s.write(w, "card.steps.html", ladderOf(touched.Card))
 		return

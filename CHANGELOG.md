@@ -5,6 +5,64 @@ The version `extension.json` names is the version this file names, and every ver
 moved. This chronicle begins at 0.60.0; what came before it is named only by the version numbers
 those bumps left behind.
 
+## v0.74.0 — every Column's name wears the same ink
+
+- A Column's heading is dressed one way in all seven Columns: the uppercase and the quiet ink a heading already
+  wears. The backlog's heading used to wear Gruvbox's light purple, which the human read as sticking out of the board;
+  it now reads like the closed Column's, which has no heading rule of its own.
+- What tells the Columns apart is untouched and is still the Column itself - the dashed edge a closed one is drawn
+  with, the ground a done one is drawn on, the sentence a Column that takes no drop prints under its name.
+- The palette role that carried the purple is bound in neither theme block now, so nothing stands bound that no rule
+  wears. An empty Column's ink and the count beside a heading keep theirs: those two are rules whose whole point is
+  the hue they wear.
+
+## v0.73.0 — the words under a shut ladder are framed in the Claim's orange
+
+- A Card a Session is holding shows its step boxes drawn shut, with the sentence that says why underneath them. That
+  sentence is now framed in the orange the held Card's edge wears - `--held`, Gruvbox light orange on a dark board
+  and Gruvbox dark orange on a light one - and the info glyph beside it wears it too. One colour for one fact: the
+  thick edge around a held Card and the frame under its ladder both say *a Session is holding this Card*.
+- Nothing else about that notice moved. Its words keep the ink a Card is written in, the glyph is still skipped by a
+  screen reader while the sentence names it, and the sentence is still the door's own words quoted rather than
+  restated.
+- The board's other notice keeps the quiet blue. The band a Card view wears when its Card moved underneath it says a
+  fact about the board rather than about a Claim, so it borrows nothing.
+
+## v0.72.0 — a Card view prints a done Card's commit short and copies it whole
+
+- A finished Card's commit is no longer forty hexadecimal digits on the line its Column and its times share. It is
+  printed as the first 7 digits of it and an ellipsis - `88f7065…` - the shortest name the board accepts as a commit.
+- That short name is a control, dressed like the Card's id it sits beside: the dotted underline that says these words
+  are clickable, hover and Tab focus. Clicking it puts the **whole** name onto the clipboard - the name the repository
+  behind the board answers to, not merely the characters the Card's file happens to hold - and the tooltip names that
+  whole name while you hover, so nothing the print leaves out is lost on the way back.
+- A Card finished by a commit named with seven digits and one named with forty now look the same and copy the same.
+  The board already asks git what every done Card's name is, to check the evidence a done Card owes, and the full oid
+  that answer carried is what the control hands over - so the short print copies the forty digits behind it whichever
+  way the Card was filed. A name git has no commit of is still copied as it was filed.
+- Whether the clipboard took it is said beside the control that asked, not beside the Card's id, and a browser that
+  refuses the write selects that control's own text instead.
+- A commit name the board refuses as not a sha at all - `dead` - is still printed whole. What a Contradiction quotes
+  as evidence is not abbreviated.
+
+## v0.71.0 — a Card view notices its Card changed underneath it and asks to be reopened
+
+- A Card's face now carries the stamp its file was last written at, and the Card view open in the modal carries the
+  stamp of the render that filled it. When the two differ - a Comment arrived, a step was marked, a session edited the
+  words - the view says so in a band under its title: *this Card has changed on the board since this view was opened -
+  close it and open it again to read the new words; nothing in this view is redrawn under you*. The poll is what
+  brings the face's new stamp, so the band is re-said while they differ, stays rather than blinks, and is gone when a
+  reopened view matches.
+- Nothing in an open Card view is redrawn under you. That was already true - a swap there would throw away words being
+  typed - and what is new is that the view stops keeping it to itself.
+- Filing a Comment and filing, marking or erasing a step answer with the stamp the Card's file holds after the write,
+  on a `Kanban-Card-Updated` header, and the view adopts it. What you typed through this view never comes back to you
+  as somebody else's change; a door that only reads a Card answers no such header, because a read leaves a view exactly
+  as old as it was.
+- A Card the poll no longer draws - moved into a Column this page is not showing, closed, filtered out - gets no band.
+  *Changed* and *gone* are different facts, and a write aimed at such a Card already answers in the board's own words.
+- The band is dressed as a notice, framed in the palette's quiet blue, and its slot costs nothing while it is silent.
+
 ## v0.70.0 — a hand files a step and erases one in a Card view, and its ladder shows what it spent
 
 - The steps region holds a field: write a name under the ladder and press **Step** - or Ctrl+Enter - to file a step

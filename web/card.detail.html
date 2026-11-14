@@ -27,8 +27,15 @@
     copies are the same string, which is what makes the paste name the Card to an agent. The commit a done Card names is printed here, and so is what is wrong with it
     when the board can see something wrong: no commit named, or a name the repository behind the board has no
     commit of. The modal marks the same Card the board marks, because a Card that reaches done without
-    evidence is not finished work whoever is looking at it. The Comments and the form
-    that files one are card.comments.html, the same
+    evidence is not finished work whoever is looking at it. What it prints of that name is the
+    shortest one the model accepts, and the control printing it is the one that hands the whole name to the clipboard
+    - the same door the id's copy uses, so the ellipsis costs nothing a human wanted to keep: the full name is in the
+    tooltip a hover reads and in what the click writes. That name is the one the repository answers to rather than
+    necessarily the one this Card's file holds: a Card filed with seven digits is copied with the forty those seven
+    abbreviated - `commitCopy` in listing.go, the oid the board already asked git for when it checked the done
+    evidence - so two done Cards naming one commit print the same short name and copy the same long one. A name the
+    shape gate refuses is printed whole, because a contradiction quotes it as evidence. The Comments and
+    the form that files one are card.comments.html, the same
     region POST /api/card/<id>/comment answers with, so filing one swaps the region the human typed in and
     nothing else on this Card - the edit form above keeps what it holds. The last control is the one that takes
     a Card out of the Column it sits in, and which control that is depends on that Column, because the three
@@ -52,12 +59,18 @@
     drawn whether or not the Card holds a step yet, because its field is how a hand files the first one and its
     ladder prints the rungs the Card has spent. What it refuses to edit stays refused here: the
     order is the order the steps were filed in, a name is not reworded, and the ordinal is printed because it is how
-    a session names the step it means. */}}
-<article class="card detail p-{{.Priority}}">
+    a session names the step it means.
+    The view carries the stamp its render was filled with, in `data-updated` on the article, and the band slot under the
+    meta line is where it says so when the 3 s poll finds the Card's file has moved past that stamp: the poll redraws
+    #board and this view is deliberately not redrawn, because a swap here would discard the words being typed into the
+    edit form or the Comment box. The stamp is re-said by the answers this view's own writes give - the
+    header web.go carries - so a Comment filed here is never reported as somebody else's change. */}}
+<article class="card detail p-{{.Priority}}" data-updated="{{stamp .Updated}}">
   <form method="dialog" class="modal-actions"><button class="modal-close glyph" aria-label="close this Card view"
       title="close this view - the Card is not changed"><svg class="i" aria-hidden="true"><use href="#icon-x"/></svg></button></form>
   <input class="card-title" id="card-title" name="title" form="card-edit" aria-label="Card title" value="{{.Title}}" required>
-  <p class="meta"><button type="button" class="card-id" id="card-id" data-copy="{{.ID}}" title="copy this Card's id to the clipboard">{{.ID}}</button><span class="copy-note" id="copy-note" role="status"></span> &middot; {{.Column}} &middot; order {{.Order}} &middot; updated {{since .Updated}} &middot; created {{since .Created}}{{if .Origin}} by <span class="origin">{{.Origin}}</span>{{end}}{{if .Commit}} &middot; commit <span class="commit">{{.Commit}}</span>{{end}}{{if .Contradiction}} &middot; <span class="contradiction">{{.Contradiction}}</span>{{end}}{{if .Claim}} &middot; held by <span class="claim">{{.Claim.Session}}</span> {{since .Claim.At}}{{end}}</p>
+  <p class="meta"><button type="button" class="card-id" id="card-id" data-copy="{{.ID}}" title="copy this Card's id to the clipboard">{{.ID}}</button><span class="copy-note" id="copy-note" role="status"></span> &middot; {{.Column}} &middot; order {{.Order}} &middot; updated {{since .Updated}} &middot; created {{since .Created}}{{if .Origin}} by <span class="origin">{{.Origin}}</span>{{end}}{{if .Commit}}{{with commitCopy .}} &middot; commit <button type="button" class="commit" data-copy="{{.}}" title="copy this Card's full commit name to the clipboard - {{.}}">{{shortSHA .}}</button><span class="copy-note" id="commit-copy-note" role="status"></span>{{end}}{{end}}{{if .Contradiction}} &middot; <span class="contradiction">{{.Contradiction}}</span>{{end}}{{if .Claim}} &middot; held by <span class="claim">{{.Claim.Session}}</span> {{since .Claim.At}}{{end}}</p>
+  <p class="card-stale" id="card-stale"></p>
   <form class="card-edit" id="card-edit" hx-patch="/api/card/{{.ID}}">
     <div class="prio" role="radiogroup" aria-label="Priority">
       <span class="prio-label">Priority</span>

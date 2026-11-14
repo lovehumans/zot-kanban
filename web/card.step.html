@@ -18,7 +18,7 @@
     The ordinal is printed rather than inferred from position, because the rung numbers are what a session names a
     step with. A name is never edited here: a Step's name is filed and never reworded. The controls are
     drawn disabled where no Board door answers this Card's steps, and the region below says why in the door's own
-    words (card.steps.html, stepsLocked in board.go). */}}
+    words (card.steps.html, stepsLocked in card.go). */}}
 {{define "card.step.rung"}}
 <li class="step{{if .Rung.Step.Done}} done{{end}}{{if .Rung.Erased}} erased{{end}}">
   {{- if .Rung.Erased}}

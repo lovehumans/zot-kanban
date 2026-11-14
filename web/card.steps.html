@@ -13,16 +13,17 @@
     filed and never reworded, and no control here edits one. The field announces no ordinal, because the
     ordinal is the door's own business; it refuses a name longer than the door would file, and its tooltip says what
     this Card is out of room on - the name limit, or the seven live steps a Card holds at most, in which case the
-    field and its button are drawn shut together (stepNameLimit, stepsFull, stepFieldHint in board.go and web.go).
+    field and its button are drawn shut together (stepNameLimit in gate.go, stepsFull in card.go,
+    and stepFieldHint in web.go).
     A filed step is born open, so the rung it lands on is one a hand can mark or erase at once.
 
     Filing is open on a done Card: a hand can add a step to finished work, and that is how a finished Card is made to
     hold up again or made unmet - the paint, not a refusal. The controls are drawn shut wherever no Board
     door answers this Card's steps, and the sentence under them is the one that door would refuse a click with -
-    stepsLocked in board.go, quoted rather than restated, the way the page quotes movable and ruleFor. It
-    is drawn as a notice - framed in the quiet blue and wearing the info glyph - because it is the board telling a
-    reader why a control is shut rather than another line of the Card's text; the glyph says *notice* where the words
-    say what, and it is aria-hidden beside them (board.css). Two
+    stepsLocked in card.go, quoted rather than restated, the way the page quotes movable and ruleFor. It
+    is drawn as a notice - framed in the orange a held Card's edge wears, and wearing the info glyph - because it is
+    the board telling a reader why a control is shut rather than another line of the Card's text; the glyph says
+    *notice* where the words say what, and it is aria-hidden beside them (board.css). Two
     Cards are locked: one a session is holding in doing, whose steps that session writes, and the way back is a drag
     out of doing that releases the Claim; and one kept in closed, which answers no step from any
     door and is unlocked by reopening it. A done Card keeps its controls live whatever its

@@ -2,7 +2,7 @@
    colours go on them. This sheet names only roles - var(--page), var(--edge), var(--prio-high) - and holds no hex
    value and no Gruvbox name; every colour it paints is declared and bound twice in web/gruvbox.css, once per theme.
    Nothing in this sheet may invent a colour a theme does not declare. A rule here can still
-   mean its hue - a Priority stripe, the switch's fill, the backlog's heading - but it says so with a role the palette
+   mean its hue - a Priority stripe, the switch's fill, the frame under a shut ladder - but it says so with a role the palette
    sheet binds, which is what lets a palette be swapped without rewriting a stripe. */
 
 * { box-sizing: border-box; }
@@ -73,12 +73,13 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
 .card .title { margin: 0; color: var(--fg-strong); }
 .card .body { margin: .35rem 0 0; color: var(--body); white-space: pre-wrap; }
 .card .meta { margin: .35rem 0 0; color: var(--muted); font-size: .75rem; }
-/* An empty Column, the count beside a heading and the backlog's heading are three rules whose whole point is the hue
-   they wear, and each hue is bound per theme above rather than named twice here: an empty Column's quiet
-   ink is bg4 on a dark ground and fg4 on a light one, the same bytes reached from the other side of the mirror, and
-   the backlog's purple is the one that crosses into the loud half, where the two halves do differ. */
+/* An empty Column and the count beside a heading are two rules whose whole point is the hue they wear,
+   and each hue is bound per theme above rather than named twice here: an empty Column's quiet ink is bg4 on a dark
+   ground and fg4 on a light one, the same bytes reached from the other side of the mirror. A Column's heading is not
+   one of those rules: every Column's name wears the page's quiet ink, because what says which Column this is - the
+   dashed edge of a closed one, the ground a done one is drawn on - is the Column itself, not the hue of its name
+   (the human's ask, 0.74.0). */
 .empty { color: var(--empty-ink); margin: 0; }
-.col-backlog h2 { color: var(--backlog-ink); }
 .col-done .card { opacity: .72; }
 .board-error { color: var(--wrong); border: 1px solid var(--wrong-edge); background: var(--page); border-radius: 5px;
                padding: .5rem .7rem; margin: 0 0 .8rem; grid-column: 1 / -1; }
@@ -95,8 +96,8 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
    decides it is .kanban/unseen_comments, gitignored for the same reason the new mark's is. */
 .card .new-comments { color: var(--accent); }
 /* A Comment count is a number and Tabler's bubble, the word left out: the bubble says what the word said, the
-   number says how many, and the words live in the count's title (card.fragment.html, as 0.70.0).
-   No colour rule here - the glyph paints through currentColor, so the blue the rule above lights the
+   number says how many, and the words live in the count's title (card.fragment.html,
+   0.70.0). No colour rule here - the glyph paints through currentColor, so the blue the rule above lights the
    number with lights the bubble with, and the pair is kept on one line of the meta line. */
 .card .comment-count { white-space: nowrap; }
 /* A Card an Agent is holding wears a thick edge, because the way a claim is released is a human drag and the
@@ -128,7 +129,7 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
 .card .contradiction { color: var(--wrong); }
 .col-done .card:has(.contradiction) { opacity: 1; }
 /* A Card's steps are said on its face as x/n in the meta line, in the same quiet ink the rest of that line wears,
-   and a Card with no steps prints nothing there. The count is board.go's reading (stepCount) rather than a number a
+   and a Card with no steps prints nothing there. The count is card.go's reading (stepCount) rather than a number a
    template worked out. A finished Card still showing a step undone paints those numbers in the red the board already
    uses for what does not hold up, and is not dimmed with the rest of done for the same reason a contradicting Card is
    not: it is the one thing on that Column a human is meant to look at. An unmet step is deliberately not a
@@ -154,7 +155,7 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
    glyph posts op=erase - the same word the Agent's door and the model door use for the same thing (card.steps.html,
    card.step.html). The ordinal is printed because it is how a session names the step it works, and how a hand reading
    a Card an agent worked can tell which one a sentence was about; the name is part of the click target because a step
-   is marked by its name. A control drawn disabled is not the board being shy: stepsLocked in board.go is the very
+   is marked by its name. A control drawn disabled is not the board being shy: stepsLocked in card.go is the very
    sentence the door behind it would answer a click with, and it is printed under the ladder so the reason is read
    rather than guessed. */
 .card .steps-head { margin: .55rem 0 0; color: var(--fg-strong); font-size: .8rem; }
@@ -167,15 +168,15 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
 .card .step.done .step-name { color: var(--muted); text-decoration: line-through; }
 .card .step-box:has(.step-check:disabled) { cursor: default; color: var(--muted); }
 .card .step-check:disabled { accent-color: var(--muted); }
-/* The reason a ladder is shut is a notice rather than another line of the Card's own text: it is framed in the
-   quiet blue the board uses to say something to a reader, and it wears the info glyph beside those words. Its ink
-   stays the rest ink a Card is written in, because what is being explained is meant to be read and not merely
-   noticed, and nothing in it is to click - the sentence is the door's own words, quoted rather than restated,
-   and the glyph is decoration a screen reader skips while the sentence names it (card.steps.html,
-   stepsLocked in board.go). */
-.card .steps-locked { margin: .35rem 0 0 0; padding: .3rem .5rem; border: 1px solid var(--info); border-radius: 4px;
+/* The reason a ladder is shut is a notice rather than another line of the Card's own text, and it is framed in the
+   orange a held Card's edge wears: the words under a shut ladder name the one fact that edge names, that a Session
+   is holding this Card, so the two say it in one colour. Its ink stays the rest ink a Card is written
+   in, because what is being explained is meant to be read and not merely noticed, and nothing in it is to click -
+   the sentence is the door's own words, quoted rather than restated, and the glyph is decoration a screen
+   reader skips while the sentence names it (card.steps.html, stepsLocked in card.go). */
+.card .steps-locked { margin: .35rem 0 0 0; padding: .3rem .5rem; border: 1px solid var(--held); border-radius: 4px;
                       color: var(--muted); font-size: .75rem; }
-.card .steps-locked .i { color: var(--info); }
+.card .steps-locked .i { color: var(--held); }
 /* A step erased keeps its ordinal off the later ones, and the Card's own view prints that gap rather than hiding it:
    the rung stays in the ladder, says only *erased* where the name was, and carries nothing to click. It is not the
    wrong red - erasing a step is a legal write, not a Card that does not hold up - and it is not a rung one can mark,
@@ -317,12 +318,16 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
    it is long and worth copying rather than retyping. It is the control that copies itself: a <button> painted
    as the identifier it prints - the accent a Card's name wears, and the dotted underline that says these words
    are clickable rather than text to select - because a second button beside it was chrome saying the same
-   thing twice. The note after it is where web/board.js says whether the clipboard took it. */
-.card-modal .card-id { font: inherit; color: var(--accent); background: none; border: 0; padding: 0;
+   thing twice. The note after it is where web/board.js says whether the clipboard took it.
+   A done Card's commit is dressed the same way, because it is the same kind of thing to copy and the same kind of
+   thing to read at a glance: it prints short and copies whole, so it keeps the ink a commit wears (.card .commit)
+   rather than borrowing the hue a Card's name wears. */
+.card-modal .card-id, .card-modal .commit { font: inherit; background: none; border: 0; padding: 0;
                        cursor: pointer; text-decoration: underline; text-decoration-style: dotted;
                        text-decoration-color: var(--edge); }
-.card-modal .card-id:hover { text-decoration-color: var(--accent); }
-.card-modal .card-id:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card-modal .card-id { color: var(--accent); }
+.card-modal .card-id:hover, .card-modal .commit:hover { text-decoration-color: var(--accent); }
+.card-modal .card-id:focus-visible, .card-modal .commit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card-modal .copy-note { color: var(--muted); font-size: .72rem; margin-left: .4rem; }
 .card-modal .copy-note:empty { display: none; }
 
@@ -458,3 +463,10 @@ footer { color: var(--muted); font-size: .8rem; margin-top: 1rem; border-top: 1p
 .card-error { color: var(--wrong); border: 1px solid var(--wrong-edge); background: var(--page); border-radius: 5px;
               padding: .35rem .6rem; margin: .5rem 0 0; }
 .card-error:empty { display: none; }
+/* A Card view is not redrawn under the human, so when the 3 s poll finds the Card's file has moved past the
+   render this view was filled with, the view says so instead of being swapped: the band names the one action that
+   reads the new words, closing and opening the view. It wears the notice blue rather than the wrong red, because a
+   Card moving under a view is a fact about the board and not a write that failed. */
+.card-stale { border: 1px solid var(--info); border-radius: 4px; color: var(--muted); font-size: .75rem;
+              padding: .35rem .6rem; margin: .5rem 0 0; }
+.card-stale:empty { display: none; }
