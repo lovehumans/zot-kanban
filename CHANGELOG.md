@@ -5,6 +5,19 @@ The version `extension.json` names is the version this file names, and every ver
 moved. This chronicle begins at 0.60.0; what came before it is named only by the version numbers
 those bumps left behind.
 
+## v0.74.2 — a Card is named by its whole id
+
+- The rules the `kanban` tool carries now say a Card is named by its whole id, copied from what a read printed rather
+  than retyped: half an id names no Card, in a call or in chat. A call naming only the words after the date-minute was
+  answered `no Card with that id` before and is answered so now; what moved is that the rules say it where a session
+  reads them before it calls, and that a listing - `kanban read {column: ready}` - prints each Card's whole id beside
+  its title, which is where an id is copied from.
+- The rules no longer say what a Card face in a Column prints. That is still how the board paints a face - the title,
+  with the id left to the Card's own view - and it is now said once, by the page and the test that holds it.
+- Nothing else moved. No Column, step, Comment rule, page or colour changed; the board answers the six actions as it
+  did, a Card taken to done still names the commit that carries the change, and a Card filed by a session is still the
+  only one that session may edit.
+
 ## v0.74.1 — an ordinal named by the wrong word is refused, not filed
 
 - A Comment is corrected by its `id`, and a step is marked by its `ordinal`. A call naming the other door's word used

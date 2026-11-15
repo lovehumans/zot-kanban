@@ -18,7 +18,7 @@ import (
 	"github.com/patriceckhart/zot/packages/agent/ext"
 )
 
-const version = "0.74.1" // must match extension.json, which is what zot ext list reports
+const version = "0.74.2" // must match extension.json, which is what zot ext list reports
 
 // The command and the agent tool share a name, the way zot-review names both its command and its
 // tool "review". The extension is named for what it is, without the project prefix, because inside a
@@ -36,8 +36,10 @@ const (
 // the Board refused, so the sha a done move costs, the fact that closed is no move target, and whose Claim blocks
 // a move are said by the refusal that answers them, and saying them again here is how two copies of one rule drift
 // apart. These are the rules a session has to hold before it calls anything: which Column a Card is taken from,
-// when work has begun, what a session claims, how a claim is released when a session dies, and when a session may
-// move a Card into ready on its own.
+// when work has begun, what a session claims, how a claim is released when a session dies, when a session may move
+// a Card into ready on its own, and how a Card is named in the words it writes - a sentence is no call, so nothing
+// answers a Card named by half its id there. What the board paints on a page is not this
+// text's business either: a session that reads the page sees it, and the tool answers its own calls.
 const boardRules = `Take a Card from ready, never from inbox: inbox is the human's triage column, so reading it is
 seeing what waits, not taking it, and when ready is empty what to take is the human's to decide. A Card is worked
 only from doing, held by you: taking a Card on - to grill it, plan it or build it - is the move into doing, and it
@@ -47,9 +49,9 @@ implementations at once only when they share code and cannot be done separately.
 finishing moves the Card back to the Column it came from, which releases the claim; a Card left claimed by a
 session that died is the human's drag to release. Work the human asks for in chat still gets a Card first, into
 inbox for triage: move it into ready yourself only when the human permitted that in chat, and name the permission
-in a Comment. A Card face in a Column names the Card by its title and prints no id, so an id is copied from a
-Card's own view. Work a Card's steps as you go, mark one done the moment it is done, and read a Card you have not
-looked at since before you touch it again.`
+in a Comment. Name a Card by its whole id, copied from what a read printed rather than retyped: half an id names
+no Card, in a call or in chat. Work a Card's steps as you go, mark one done the moment it is done, and read a Card
+you have not looked at since before you touch it again.`
 
 // toolActions is what this tool's six actions are and what each one takes, said once beside the rules they
 // serve. Nothing is required at schema level: what an action needs is named by the refusal that answers a call
