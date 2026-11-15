@@ -32,9 +32,10 @@ const (
 	urlFile    = "url" // this session's board address; volatile, so not git-tracked
 
 	// unseenFile is the read-state file under .kanban: the ids of Agent-filed Cards no one has opened yet.
-	// It is volatile the way the board address is, so it is gitignored rather than committed.
-	// unseenCommentsFile holds the ids of Cards carrying a Comment no one has opened since an Agent filed it,
-	// the same shape and the same gitignored status.
+	// It is volatile the way the board address is, and the board arranges that git ignores the three of them
+	// rather than leaving a hand to notice them. unseenCommentsFile holds the ids of
+	// Cards carrying a Comment no one has opened since an Agent filed it, the same shape and the same
+	// exclusion.
 	unseenFile         = "unseen"
 	unseenCommentsFile = "unseen_comments"
 
@@ -100,6 +101,12 @@ func validColumn(col string) bool {
 type Board struct {
 	Root string
 	mu   sync.Mutex
+
+	// excludeRun is what the one pass over the board's working files did, and excludeRan records that it ran:
+	// a board is re-read every few seconds and git is a subprocess each time, so the questions are asked once
+	// per board and the answer is kept for the line a board announces with.
+	excludeRun excludeResult
+	excludeRan bool
 }
 
 // NewBoard points at <project>/.kanban. The project is wherever the caller is standing, which for

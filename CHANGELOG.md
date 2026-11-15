@@ -5,6 +5,26 @@ The version `extension.json` names is the version this file names, and every ver
 moved. This chronicle begins at 0.60.0; what came before it is named only by the version numbers
 those bumps left behind.
 
+## v0.75.0 — the board arranges its own working files into the repository's exclude file
+
+- Starting a board in a git repository now arranges, by itself, that git ignores the board's three **working files**:
+  `url`, the address a board bound, and the two stores the new marks are read off, `unseen` and `unseen_comments`. One
+  anchored line for each goes into `<gitdir>/info/exclude`, git's own exclude file - the one no clone carries and no
+  diff shows - under a header naming who wrote them. The glossary has a term for the three now.
+- It asks git before it writes, so your rules are neither repeated nor fought. A name a `.gitignore` you wrote already
+  covers is not written again; a name git already tracks gets no line at all, because no exclude line un-tracks a
+  file, and the board says that on its line instead. `.kanban/trash/` is never among the three: whether a deleted Card
+  is tracked stays your call.
+- The line a board start prints - the CLI's and zot's, one text - names what was arranged:
+  `kanban <version> board http://127.0.0.1:7498 (/path/.kanban) — excluded .kanban/url, .kanban/unseen and
+  .kanban/unseen_comments in .git/info/exclude`. In the steady state, when everything is already arranged, the line
+  says no more than it used to; where git knows no repository the board arranges nothing and says nothing; a git it
+  could not ask is a notice on the line rather than a reason to stay down.
+- The questions are asked once per board, not once per read, so the 3 s poll costs no git calls. Three questions are
+  asked - where the repository begins, what is already covered, what is already tracked - and one file of its own is
+  written. What a board may do to a repository is otherwise unchanged: it runs no git verb that moves or removes a
+  Card or a Column.
+
 ## v0.74.2 — a Card is named by its whole id
 
 - The rules the `kanban` tool carries now say a Card is named by its whole id, copied from what a read printed rather

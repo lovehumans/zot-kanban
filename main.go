@@ -18,7 +18,7 @@ import (
 	"github.com/patriceckhart/zot/packages/agent/ext"
 )
 
-const version = "0.74.2" // must match extension.json, which is what zot ext list reports
+const version = "0.75.0" // must match extension.json, which is what zot ext list reports
 
 // The command and the agent tool share a name, the way zot-review names both its command and its
 // tool "review". The extension is named for what it is, without the project prefix, because inside a
@@ -761,10 +761,12 @@ func (k *kanban) started(host ext.HostInfo) {
 }
 
 // startLine is what a board that has begun announces: the version announcing, the address serving, and the tree
-// whose files it reads. The startup notification and `zot-kanban serve` both say it, and the version is in it
-// because a log line a session never saw is one it cannot read the generation off.
+// whose files it reads, plus what it did about its own working files when there was anything to tell. The startup
+// notification and `zot-kanban serve` both say it, and the version is in it because a log line a session never saw
+// is one it cannot read the generation off.
 func startLine(srv *Server) string {
-	return "kanban " + version + " board " + srv.boardURL() + " (" + srv.board.Root + ")"
+	return "kanban " + version + " board " + srv.boardURL() + " (" + srv.board.Root + ")" +
+		srv.board.excludeVolatile().announce()
 }
 
 // sessionEnded reports the board to the human when the session is over. Event handlers are

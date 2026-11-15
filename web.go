@@ -281,6 +281,10 @@ func (s *Server) ListenExactly(port int) error {
 func (s *Server) bound(ln net.Listener, port int) error {
 	s.ln = ln
 	s.url = fmt.Sprintf("http://127.0.0.1:%d", port)
+	// This is where a board starts writing its working files, so it is where the board arranges for git to
+	// ignore them: the address below is the first of the three, and a rule written before the file appears is
+	// a rule rather than a cleanup. What the pass did travels on the line both doors print.
+	s.board.excludeVolatile()
 	if err := s.board.WriteURL(s.url); err != nil {
 		return fmt.Errorf("record board url: %w", err)
 	}

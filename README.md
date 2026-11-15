@@ -173,6 +173,8 @@ dated note you type into `comments` with nothing else is a valid Comment. A bloc
 blocked-reason field. The board re-reads the files on every request, so a change made outside it shows up on the next
 poll.
 
+Cards are files git should carry; the board's own working files are not. `url` (the address a board bound) and the two stores the new marks are read off, `unseen` and `unseen_comments`, are what the board keeps rather than a record of work, so a board start arranges that git ignores them by writing one line each into `.git/info/exclude` - git's local exclude file, the one no clone carries and no diff shows - and names on the same line what it wrote. It asks git first, so it never repeats a rule you wrote yourself and never writes a line for a file git already tracks; that case is said on the line instead. `.kanban/trash/` is never among them: whether a deleted Card is tracked is your call.
+
 ## Install
 
 ```bash
