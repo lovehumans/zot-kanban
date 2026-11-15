@@ -18,7 +18,7 @@ import (
 	"github.com/patriceckhart/zot/packages/agent/ext"
 )
 
-const version = "0.74.0" // must match extension.json, which is what zot ext list reports
+const version = "0.74.1" // must match extension.json, which is what zot ext list reports
 
 // The command and the agent tool share a name, the way zot-review names both its command and its
 // tool "review". The extension is named for what it is, without the project prefix, because inside a
@@ -359,6 +359,11 @@ func (k *kanban) commentCard(in toolArgs) (answer, error) {
 	if text == "" {
 		return answer{}, errors.New("kanban comment: needs \"text\", the Comment to file")
 	}
+	// An ordinal has one word per door: "ordinal" is a step's, "id" is a Comment's. A call that named the step's
+	// word used to be answered by filing the next Comment, which wrote a Card the caller never meant to write.
+	if in.StepOrdinal != 0 {
+		return answer{}, fmt.Errorf(`kanban comment: "ordinal" is a step's ordinal on card %s: a Comment is corrected by "id", or left out for the next one on this Card`, cardID)
+	}
 	if in.CommentID < 0 {
 		return answer{}, fmt.Errorf("kanban comment: \"id\" is a Comment ordinal on card %s, or left out for the next one on it, and %d is no ordinal anywhere", cardID, in.CommentID)
 	}
@@ -397,6 +402,10 @@ func (k *kanban) stepCard(in toolArgs) (answer, error) {
 	cardID := strings.TrimSpace(in.CardID)
 	if cardID == "" {
 		return answer{}, errors.New("kanban step: needs \"card\", the id of the Card whose step this is")
+	}
+	// The other half of the same boundary: a call naming a Comment's word for an ordinal is not a step marked.
+	if in.CommentID != 0 {
+		return answer{}, fmt.Errorf(`kanban step: "id" is a Comment's ordinal on card %s: a step is named by "ordinal" for the one to mark, or by "text" for a new one`, cardID)
 	}
 	touched, err := k.board.StepAsAgent(StepRequest{
 		Card:    cardID,

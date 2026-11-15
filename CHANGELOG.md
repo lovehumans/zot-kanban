@@ -5,6 +5,14 @@ The version `extension.json` names is the version this file names, and every ver
 moved. This chronicle begins at 0.60.0; what came before it is named only by the version numbers
 those bumps left behind.
 
+## v0.74.1 — an ordinal named by the wrong word is refused, not filed
+
+- A Comment is corrected by its `id`, and a step is marked by its `ordinal`. A call naming the other door's word used
+  to be answered anyway: a Comment meant to be corrected was filed beside it as a new one, and a step meant to be
+  marked was filed as a new step. Both calls are refused now, and the refusal names the word to send.
+- Nothing else moved. Which Comment a session may correct, the Card file a correction lands in, and the boxes on a
+  Card view are as they were; only a call that named the wrong word gets an answer it did not get before.
+
 ## v0.74.0 — every Column's name wears the same ink
 
 - A Column's heading is dressed one way in all seven Columns: the uppercase and the quiet ink a heading already
