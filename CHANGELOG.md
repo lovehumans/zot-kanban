@@ -5,6 +5,28 @@ The version `extension.json` names is the version this file names, and every ver
 moved. This chronicle begins at 0.60.0; what came before it is named only by the version numbers
 those bumps left behind.
 
+## v0.76.0 — the TUI log names a Card by its id, and leads with it
+
+- Every line the board prints beside your conversation now leads with the **Card's whole id**, then says what the
+  board did to it — `<id>: filed in inbox`, where `<id>` is the whole id a read printed. The `kanban: ` prefix is
+  gone — the line is already this extension's own note in zot's notes area beside your input, and no other
+  extension pushes it — and no line names a Card by its title, which was the half of a name you could not paste
+  into a call and which an `edit` line quoted after that title had already been replaced.
+- The lines, in full: `<id>:` and then the words below, each in the shape its verb pushes — `filed in inbox`,
+  `edited in doing: Fix the ladder's colour`, `Comment 1 filed`, `Comment 1 corrected`, `step 1 filed: write the
+  step door`, `step 1 marked done: write the step door`, `step 1 opened again: write the step door`,
+  `step 1 erased: write the step door`, `moved ready -> blocked`, `taken into doing by tidy-birch`,
+  `filed done at 9f2c1ab`. A name stays where it was the point of the answer — the fields an `edit` named, the step
+  a `step` call touched — and the Column a Comment or a step was read from is gone, because the id is the address
+  and a read answers a Card from whatever Column holds it.
+- Several lines of one Card's work now read as a run, and the id you already have on screen is what every line
+  starts with: what you read beside a conversation is what the next call is written with.
+- A running zot loads an extension only at startup, so `/reload-ext` — or a new `zot --ext .` in this repository —
+  is what makes your current session see the new lines. Until then the board answers with the shape it had.
+- Nothing else moved. What the tool answers an Agent, a Card file, a Comment's grammar, the board page and its web
+  log are unchanged; a refusal still quotes the Column gate's answer, and a Card taken to done still names the
+  commit that carries the change.
+
 ## v0.75.0 — the board arranges its own working files into the repository's exclude file
 
 - Starting a board in a git repository now arranges, by itself, that git ignores the board's three **working files**:

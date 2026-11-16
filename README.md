@@ -116,7 +116,7 @@ own.
   - `comment` files a Comment on a Card, or corrects one the agent's own session wrote. 
   - `step` files a step on a Card you hold in `doing` (`card`, `text`), or marks one done (`card`, `ordinal`); `op` is `"undo"` to open a step marked done or `"erase"` to erase one, which leaves its ordinal spent and prints its rung as *erased* in the Card view. An ordinal is never reused, so one you read stays the number it names. 
   - `move` carries a Card to another Column, and needs `commit` - the SHA of the commit that carries the change - to move into `done`.
-- the **tool log** above your input while the tool works: one line per thing it did - a move, a filed Comment - each naming the Card and quoting none of it. Stays until your turn.
+- the **TUI log** above your input while the tool works: one line per thing it did - a move, a filed Comment - each leading with the Card's whole id and quoting none of it. Stays until your turn.
 
 
 The rules an agent is bound by are published in the tool description zot hands it, so they are the same words the refusals quote. 

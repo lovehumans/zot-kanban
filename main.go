@@ -18,7 +18,7 @@ import (
 	"github.com/patriceckhart/zot/packages/agent/ext"
 )
 
-const version = "0.75.0" // must match extension.json, which is what zot ext list reports
+const version = "0.76.0" // must match extension.json, which is what zot ext list reports
 
 // The command and the agent tool share a name, the way zot-review names both its command and its
 // tool "review". The extension is named for what it is, without the project prefix, because inside a
@@ -206,15 +206,23 @@ func (k *kanban) register() {
 
 // answer is what one tool call leaves with: the sentence the Agent reads back, and the line the human is told
 // beside it - empty when there is nothing to tell, which is what a read and every "no change" answer is. A verb
-// decides both and touches no host: callTool is the one place that knows zot has a log to notify, which is what
+// decides both and touches no host: callTool is the one place that knows zot has a TUI log, which is what
 // makes a verb's sentence testable without launching this extension as a subprocess.
 type answer struct {
 	toAgent string
 	toHuman string
 }
 
+// tuiLine is the one shape a TUI log line takes: the Card's whole id first, then what the board did to it. The id
+// leads because it is what the human already has on screen and can hand straight to the next call, and because the
+// lines of one Card's work then read as a run. What a Card holds - its title, its body, a Comment's
+// words - is shown where a Card is shown, not in a line beside a conversation.
+func tuiLine(id, did string) string {
+	return id + ": " + did
+}
+
 // callTool is the one tool's dispatcher: one action discriminator, not one tool per verb. It is also
-// the one place a call's two texts are handed over - the Agent's as the result, the human's as a log line - and
+// the one place a call's two texts are handed over - the Agent's as the result, the human's as a TUI log line - and
 // the one place a refusal is written out.
 func (k *kanban) callTool(args json.RawMessage) ext.ToolResult {
 	var in toolArgs
@@ -293,7 +301,7 @@ func (k *kanban) addCard(in toolArgs) (answer, error) {
 	// gets the file, because the answer has to be checkable.
 	return answer{
 		toAgent: fmt.Sprintf("added card %s to %s: %s", card.ID, card.Column, path),
-		toHuman: fmt.Sprintf("kanban: card in inbox: %s", card.Title),
+		toHuman: tuiLine(card.ID, "filed in inbox"),
 	}, nil
 }
 
@@ -339,14 +347,14 @@ func requestedEdit(in toolArgs) (CardEdit, []string) {
 
 // editSaid is the sentence an Agent gets for an Edit the Board answered, and the notice the human sees beside it:
 // which fields the Card was changed in, and nothing at all when the Card already said them. The notice
-// names the Card by its new title and quotes no field's content, the way every other notice does.
+// names the Card by its id and quotes no field's content, the way every other notice does.
 func editSaid(edited Write, fields []string) (said, notify string) {
 	if !edited.Changed {
 		return fmt.Sprintf("no change: card %s already says that", edited.ID), ""
 	}
 	changed := strings.Join(fields, ", ")
 	return fmt.Sprintf("card %s edited in %s: %s", edited.ID, edited.Column, changed),
-		fmt.Sprintf("kanban: card edited: %s (%s)", edited.Title, changed)
+		tuiLine(edited.ID, fmt.Sprintf("edited in %s: %s", edited.Column, changed))
 }
 
 // commentCard files one Comment in a single call. A repeat of the same words is the Comment it
@@ -389,11 +397,12 @@ func commentSaid(filed Write, ask int, text string) (said, notify string) {
 	if !filed.Changed {
 		return fmt.Sprintf("no change: Comment %d on card %s already says that", filed.commentID(text), filed.ID), ""
 	}
-	said = fmt.Sprintf("Comment %d filed on card %s", filed.commentID(text), filed.ID)
 	if ask != 0 {
-		said = fmt.Sprintf("Comment %d on card %s corrected", ask, filed.ID)
+		return fmt.Sprintf("Comment %d on card %s corrected", ask, filed.ID),
+			tuiLine(filed.ID, fmt.Sprintf("Comment %d corrected", ask))
 	}
-	return said, "kanban: " + said
+	return fmt.Sprintf("Comment %d filed on card %s", filed.commentID(text), filed.ID),
+		tuiLine(filed.ID, fmt.Sprintf("Comment %d filed", filed.commentID(text)))
 }
 
 // stepCard works one of a Card's steps: a name files one, an ordinal marks it, and an ordinal with op opens it
@@ -437,15 +446,17 @@ func stepSaid(touched StepWrite) (said, notify string) {
 	}
 	switch touched.Did {
 	case stepUnmarked:
-		said = fmt.Sprintf("step %d on card %s opened again: %s", touched.Step.ID, touched.ID, touched.Step.Name)
+		return fmt.Sprintf("step %d on card %s opened again: %s", touched.Step.ID, touched.ID, touched.Step.Name),
+			tuiLine(touched.ID, fmt.Sprintf("step %d opened again: %s", touched.Step.ID, touched.Step.Name))
 	case stepErased:
-		said = fmt.Sprintf("step %d erased from card %s: %s", touched.Step.ID, touched.ID, touched.Step.Name)
+		return fmt.Sprintf("step %d erased from card %s: %s", touched.Step.ID, touched.ID, touched.Step.Name),
+			tuiLine(touched.ID, fmt.Sprintf("step %d erased: %s", touched.Step.ID, touched.Step.Name))
 	case stepMarked:
-		said = fmt.Sprintf("step %d on card %s marked done: %s", touched.Step.ID, touched.ID, touched.Step.Name)
-	default:
-		said = fmt.Sprintf("step %d filed on card %s: %s", touched.Step.ID, touched.ID, touched.Step.Name)
+		return fmt.Sprintf("step %d on card %s marked done: %s", touched.Step.ID, touched.ID, touched.Step.Name),
+			tuiLine(touched.ID, fmt.Sprintf("step %d marked done: %s", touched.Step.ID, touched.Step.Name))
 	}
-	return said, "kanban: " + said
+	return fmt.Sprintf("step %d filed on card %s: %s", touched.Step.ID, touched.ID, touched.Step.Name),
+		tuiLine(touched.ID, fmt.Sprintf("step %d filed: %s", touched.Step.ID, touched.Step.Name))
 }
 
 // moveCard carries a Card from one Column to another, which is the file rename kept as the only way
@@ -489,7 +500,7 @@ func moveSaid(moved Write, session string) (said, notify string) {
 		// The only in-place Write Move makes in doing is the Claim it adds to a Card nobody was holding.
 		if moved.Changed {
 			return fmt.Sprintf("card %s was already in doing with nobody holding it, and is now claimed for this session", moved.ID),
-				fmt.Sprintf("kanban: card taken into doing: %s (%s)", moved.Title, session)
+				tuiLine(moved.ID, "taken into doing by "+session)
 		}
 		if held := moved.Card.Claim; held != nil && held.Session == session {
 			return fmt.Sprintf("no change: card %s is already in doing, held by this session", moved.ID), ""
@@ -499,13 +510,13 @@ func moveSaid(moved Write, session string) (said, notify string) {
 	switch moved.Column {
 	case DoneColumn:
 		return fmt.Sprintf("moved card %s from %s to done with commit %s", moved.ID, moved.From, moved.Commit),
-			fmt.Sprintf("kanban: card filed done: %s (%s)", moved.ID, moved.Commit)
+			tuiLine(moved.ID, "filed done at "+moved.Commit)
 	case DoingColumn:
 		return fmt.Sprintf("moved card %s from %s to doing, claimed for this session", moved.ID, moved.From),
-			fmt.Sprintf("kanban: card taken into doing: %s (%s)", moved.Title, session)
+			tuiLine(moved.ID, "taken into doing by "+session)
 	}
 	return fmt.Sprintf("moved card %s from %s to %s", moved.ID, moved.From, moved.Column),
-		fmt.Sprintf("kanban: card moved: %s, %s -> %s", moved.ID, moved.From, moved.Column)
+		tuiLine(moved.ID, fmt.Sprintf("moved %s -> %s", moved.From, moved.Column))
 }
 
 // readBoard is what an Agent looks at before it picks anything up: the Columns an Agent works, and in each
@@ -762,7 +773,7 @@ func (k *kanban) started(host ext.HostInfo) {
 
 // startLine is what a board that has begun announces: the version announcing, the address serving, and the tree
 // whose files it reads, plus what it did about its own working files when there was anything to tell. The startup
-// notification and `zot-kanban serve` both say it, and the version is in it because a log line a session never saw
+// notification and `zot-kanban serve` both say it, and the version is in it because a TUI log line a session never saw
 // is one it cannot read the generation off.
 func startLine(srv *Server) string {
 	return "kanban " + version + " board " + srv.boardURL() + " (" + srv.board.Root + ")" +
@@ -784,7 +795,7 @@ func (k *kanban) sessionEnded(ev ext.Event) {
 	k.ext.Notify("info", "kanban at session end: "+line)
 }
 
-// summary is the board report both the command and the session_end tool log line show: one read, every column,
+// summary is the board report both the command and the session_end TUI log line show: one read, every column,
 // and the URL that is actually answering right now rather than the default one.
 func (k *kanban) summary() (string, error) {
 	cols, counts, err := k.board.CountByColumn()
